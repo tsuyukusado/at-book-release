@@ -1,0 +1,9 @@
+node_modules/
+dist/
+out/
+*.ltjruby
+*.log
+*.aux
+*.toc
+CLAUDE.md
+.claude/

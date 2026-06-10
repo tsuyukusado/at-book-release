@@ -1,0 +1,57 @@
+{
+  "name": "vscode-atb",
+  "displayName": "at-book (.atb) 構文強調",
+  "description": "at-book (.atb) ファイルの構文強調表示",
+  "version": "0.1.0",
+  "publisher": "tsuyukusa",
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:atb"
+  ],
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "atb",
+        "aliases": ["at-book", "atb"],
+        "extensions": [".atb"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "atb",
+        "scopeName": "source.atb",
+        "path": "./syntaxes/atb.tmLanguage.json"
+      }
+    ],
+    "configurationDefaults": {
+      "editor.tokenColorCustomizations": {
+        "textMateRules": [
+          {
+            "scope": [
+              "keyword.control.pagebreak.atb",
+              "keyword.other.toc.atb",
+              "punctuation.definition.list.bullet.atb",
+              "markup.list.bullet.atb",
+              "punctuation.definition.annotation.atb",
+              "markup.bold.kenten.atb",
+              "entity.name.ruby.base.atb",
+              "string.other.ruby.atb",
+              "constant.character.escape.dash.atb",
+              "constant.character.escape.ellipsis.atb"
+            ],
+            "settings": {
+              "foreground": "#4CAF50"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

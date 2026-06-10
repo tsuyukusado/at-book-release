@@ -1,0 +1,82 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "at-book",
+  "scopeName": "source.atb",
+  "patterns": [
+    { "include": "#pagebreak" },
+    { "include": "#toc" },
+    { "include": "#heading2" },
+    { "include": "#heading1" },
+    { "include": "#listItem" },
+    { "include": "#inline" }
+  ],
+  "repository": {
+    "pagebreak": {
+      "match": "^＠＠＠$",
+      "name": "keyword.control.pagebreak.atb"
+    },
+    "toc": {
+      "match": "^＠目次$",
+      "name": "keyword.other.toc.atb"
+    },
+    "heading2": {
+      "begin": "^(＠＠)(?!＠)",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "name": "markup.heading.2.atb" }
+      },
+      "contentName": "markup.heading.2.atb",
+      "patterns": [{ "include": "#inline" }]
+    },
+    "heading1": {
+      "begin": "^(＠)(?!＠)(?![^（）\\n]+（)",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "name": "markup.heading.1.atb" }
+      },
+      "contentName": "markup.heading.1.atb",
+      "patterns": [{ "include": "#inline" }]
+    },
+    "listItem": {
+      "begin": "^(　*)(・)(?!・)",
+      "end": "$",
+      "beginCaptures": {
+        "2": { "name": "punctuation.definition.list.bullet.atb" }
+      },
+      "contentName": "markup.list.bullet.atb",
+      "patterns": [{ "include": "#inline" }]
+    },
+    "inline": {
+      "patterns": [
+        { "include": "#kenten" },
+        { "include": "#ruby" },
+        { "include": "#dash" },
+        { "include": "#ellipsis" }
+      ]
+    },
+    "kenten": {
+      "match": "(＠)([^（）\\n]+)(（・）)",
+      "captures": {
+        "1": { "name": "punctuation.definition.annotation.atb" },
+        "2": { "name": "markup.bold.kenten.atb" },
+        "3": { "name": "punctuation.definition.annotation.atb" }
+      }
+    },
+    "ruby": {
+      "match": "(＠)([^（）\\n]+)(（[^）\\n]*）)",
+      "captures": {
+        "1": { "name": "punctuation.definition.annotation.atb" },
+        "2": { "name": "entity.name.ruby.base.atb" },
+        "3": { "name": "string.other.ruby.atb" }
+      }
+    },
+    "dash": {
+      "match": "ーー+",
+      "name": "constant.character.escape.dash.atb"
+    },
+    "ellipsis": {
+      "match": "・・+",
+      "name": "constant.character.escape.ellipsis.atb"
+    }
+  }
+}

@@ -57,13 +57,10 @@ function buildPreamble(config: PaperConfig): string {
             : ['\\fancypagestyle{lastpage}{\\fancyhf{}\\fancyfoot[RO]{\\rlap{\\hspace{3mm}\\thepage}}\\fancyfoot[LE]{\\llap{\\thepage\\hspace{3mm}}}\\fancyfoot[C]{\\tiny Created with at-book. Copyright \\textcopyright\\ 2026 tsuyukusado. MIT License.}\\renewcommand{\\headrulewidth}{0pt}}']),
         '\\renewcommand{\\contentsname}{目次}',
         '\\setcounter{tocdepth}{2}',
-        ...(isVertical
-            ? ['\\newcommand{\\tatechuyoko}[1]{\\leavevmode\\hbox{\\textdir TLT #1}}']
-            : []),
         '\\makeatletter',
         '\\renewcommand{\\tableofcontents}{\\par\\vspace{0.2em}\\noindent{\\bfseries\\fontsize{18}{20}\\selectfont\\contentsname}\\par\\vspace{0.1em}\\@starttoc{toc}}',
         ...(isVertical
-            ? ['\\def\\@dashedtocline#1#2#3#4#5{\\ifnum #1>\\c@tocdepth\\else\\vskip\\z@\\@plus.2\\p@{\\leftskip #2\\relax\\rightskip\\@tocrmarg\\parfillskip-\\rightskip\\parindent #2\\relax\\@afterindenttrue\\interlinepenalty\\@M\\leavevmode\\@tempdima #3\\relax\\advance\\leftskip\\@tempdima\\null\\nobreak\\hskip-\\leftskip{#4}\\nobreak\\leaders\\hbox{\\normalfont—}\\hfill\\nobreak\\hb@xt@\\@pnumwidth{\\hfil\\normalfont\\normalcolor \\tatechuyoko{#5}}\\par}\\fi}']
+            ? ['\\def\\@dashedtocline#1#2#3#4#5{\\ifnum #1>\\c@tocdepth\\else\\vskip\\z@\\@plus.2\\p@{\\leftskip #2\\relax\\rightskip\\@tocrmarg\\parfillskip-\\rightskip\\parindent #2\\relax\\@afterindenttrue\\interlinepenalty\\@M\\leavevmode\\@tempdima #3\\relax\\advance\\leftskip\\@tempdima\\null\\nobreak\\hskip-\\leftskip{#4}\\nobreak\\leaders\\hbox{\\normalfont—}\\hfill\\nobreak\\hb@xt@\\@pnumwidth{\\hfil\\normalfont\\normalcolor \\rensuji{#5}}\\par}\\fi}']
             : ['\\def\\@dashedtocline#1#2#3#4#5{\\ifnum #1>\\c@tocdepth\\else\\vskip\\z@\\@plus.2\\p@{\\leftskip #2\\relax\\rightskip\\@tocrmarg\\parfillskip-\\rightskip\\parindent #2\\relax\\@afterindenttrue\\interlinepenalty\\@M\\leavevmode\\@tempdima #3\\relax\\advance\\leftskip\\@tempdima\\null\\nobreak\\hskip-\\leftskip{#4}\\nobreak\\leaders\\hbox{\\normalfont—}\\hfill\\nobreak\\hb@xt@\\@pnumwidth{\\hfil\\normalfont\\normalcolor #5}\\par}\\fi}']),
         ...(isVertical
             ? [

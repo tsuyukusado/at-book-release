@@ -3,7 +3,7 @@ import * as path from "path";
 import { convertAtbToPdf } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
-import { nodeFileReader, nodeLuaLatexRunner, nodeConfigReader, nodeFileWriter, ensureHookInstalled } from "../infrastructure";
+import { nodeFileReader, nodeLuaLatexRunner, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs } from "../infrastructure";
 
 async function runCover(args: string[]): Promise<void> {
     // 使い方: at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]
@@ -101,14 +101,20 @@ async function main(): Promise<void> {
     const [subcommand, ...rest] = process.argv.slice(2);
 
     if (!subcommand) {
-        const config = await nodeConfigReader.read('.');
-        if (!config.autoGenerate || config.autoGenerate.length === 0) {
+        const configDirs = await findConfigDirs('.');
+        let hasAnyAutoGenerate = false;
+        for (const configDir of configDirs) {
+            const config = await nodeConfigReader.read(path.join(configDir, '_'));
+            if (!config.autoGenerate || config.autoGenerate.length === 0) continue;
+            hasAnyAutoGenerate = true;
+            for (const relPath of config.autoGenerate) {
+                await runConvert(path.join(configDir, relPath));
+            }
+        }
+        if (!hasAnyAutoGenerate) {
             console.error("使い方: at-book <file.atb>");
             console.error("        at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]");
             process.exit(1);
-        }
-        for (const atbPath of config.autoGenerate) {
-            await runConvert(atbPath);
         }
         return;
     }

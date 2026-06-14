@@ -28,8 +28,8 @@ export const nodeLuaLatexRunner: LatexRunner = {
         await writeFile(texPath, texContent, 'utf-8');
         const cmd = `lualatex -interaction=nonstopmode -output-directory="${dir}" "${texPath}"`;
         const env = { ...process.env, OSFONTDIR: fontsDir };
-        await execAsync(cmd, { env });
-        await execAsync(cmd, { env });
+        await execAsync(cmd, { env, cwd: dir });
+        await execAsync(cmd, { env, cwd: dir });
 
         const pageCount = await parsePageCount(logPath);
         return { pageCount };

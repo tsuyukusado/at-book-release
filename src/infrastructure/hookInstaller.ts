@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-const CURRENT_MARKER = "# [at-book] auto-generated hook v3";
+const CURRENT_MARKER = "# [at-book] auto-generated hook v4";
 const ANY_MARKER     = "# [at-book] auto-generated hook";
 
 const HOOK_CONTENT = `#!/bin/sh
@@ -51,7 +51,23 @@ for file in $changed; do
         continue
     fi
     echo "$targets" | grep -qxF "$file" || continue
-    at-book "$file" && echo "[at-book] $file → 生成完了"
+    LOG="/tmp/at-book-$(basename "$file" .atb).log"
+    if [ -w /dev/tty ]; then
+        at-book "$file" >/dev/tty 2>&1
+        STATUS=$?
+    else
+        at-book "$file" >"$LOG" 2>&1
+        STATUS=$?
+    fi
+    AT_BOOK_BASENAME=$(basename "$file" .atb)
+    if [ $STATUS -eq 0 ]; then
+        echo "[at-book] $file → 生成完了"
+        osascript -e "display notification \\"$AT_BOOK_BASENAME の PDF を生成しました\\" with title \\"at-book\\"" 2>/dev/null || true
+    else
+        echo "[at-book] $file → 生成失敗"
+        [ -f "$LOG" ] && echo "[at-book] ログ: $LOG"
+        osascript -e "display notification \\"PDF 生成失敗: $AT_BOOK_BASENAME\\" with title \\"at-book [エラー]\\"" 2>/dev/null || true
+    fi
 done
 `;
 

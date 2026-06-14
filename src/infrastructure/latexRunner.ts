@@ -24,12 +24,15 @@ export const nodeLuaLatexRunner: LatexRunner = {
 
         const fontsDir = path.resolve(__dirname, '../../fonts');
 
-        await mkdir(dir, { recursive: true });
-        await writeFile(texPath, texContent, 'utf-8');
-        const cmd = `lualatex -interaction=nonstopmode -output-directory="${dir}" "${texPath}"`;
+        const absDir     = path.resolve(dir);
+        const absTexPath = path.resolve(texPath);
+
+        await mkdir(absDir, { recursive: true });
+        await writeFile(absTexPath, texContent, 'utf-8');
+        const cmd = `lualatex -interaction=nonstopmode -output-directory="${absDir}" "${absTexPath}"`;
         const env = { ...process.env, OSFONTDIR: fontsDir };
-        await execAsync(cmd, { env, cwd: dir });
-        await execAsync(cmd, { env, cwd: dir });
+        await execAsync(cmd, { env });
+        await execAsync(cmd, { env });
 
         const pageCount = await parsePageCount(logPath);
         return { pageCount };

@@ -70,6 +70,9 @@ function buildPreamble(config: PaperConfig): string {
             ]
             : ['\\renewcommand*{\\l@subsection}{\\@tempdima\\jsc@tocl@width\\@dashedtocline{2}{\\@tempdima}{3.683\\zw}}']),
         '\\makeatother',
+        ...(isVertical
+            ? ['\\newcommand{\\tatechuyoko}[1]{\\leavevmode\\hbox{\\yoko #1}}']
+            : []),
         '\\begin{document}',
         '\\AtEndDocument{\\thispagestyle{lastpage}}',
         '\\setlength{\\parskip}{0pt}',

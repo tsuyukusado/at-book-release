@@ -38,7 +38,7 @@ export async function convertAtbToPdf(
     const texContent = deps.converter.convert(atbText, config);
 
     const base    = path.basename(input.atbPath, '.atb');
-    const pdfPath = path.join('out', `${base}-honbun.pdf`);
+    const pdfPath = path.join('dist', `${base}-honbun.pdf`);
 
     const { pageCount } = await deps.latexRunner.compile(texContent, pdfPath);
     return { pdfPath, pageCount, config };

@@ -37,7 +37,7 @@ async function runCover(args: string[]): Promise<void> {
         process.exit(1);
     }
 
-    const outputPath = outputArg ?? path.join('out', 'cover-template.svg');
+    const outputPath = outputArg ?? path.join('dist', 'cover-template.svg');
 
     const { svgPath } = await generateCoverTemplate(
         { fileWriter: nodeFileWriter },
@@ -75,7 +75,7 @@ async function runConvert(atbPath: string): Promise<void> {
     const { bodyPaperThicknessMm, coverPaperThicknessMm } = config;
     if (bodyPaperThicknessMm && coverPaperThicknessMm && pageCount > 0) {
         const base      = path.basename(atbPath, '.atb');
-        const coverPath = path.join('out', `${base}-hyoshi.svg`);
+        const coverPath = path.join('dist', `${base}-hyoshi.svg`);
         const { svgPath } = await generateCoverTemplate(
             { fileWriter: nodeFileWriter },
             {

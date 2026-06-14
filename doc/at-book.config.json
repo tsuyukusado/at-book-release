@@ -1,4 +1,7 @@
 {
   "paperSize": "a6",
-  "writingMode": "vertical"
+  "writingMode": "vertical",
+  "autoGenerate": [
+    "doc/sample.atb"
+  ]
 }

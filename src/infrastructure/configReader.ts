@@ -26,7 +26,12 @@ export const nodeConfigReader: ConfigReader = {
             const bodyPaperThicknessMm  = typeof rawBody  === 'number' && rawBody  > 0 ? rawBody  : undefined;
             const coverPaperThicknessMm = typeof rawCover === 'number' && rawCover > 0 ? rawCover : undefined;
 
-            return { paperSize, writingMode, bodyPaperThicknessMm, coverPaperThicknessMm };
+            const rawAutoGenerate = parsed.autoGenerate;
+            const autoGenerate = Array.isArray(rawAutoGenerate)
+                ? rawAutoGenerate.filter((v): v is string => typeof v === 'string')
+                : undefined;
+
+            return { paperSize, writingMode, bodyPaperThicknessMm, coverPaperThicknessMm, autoGenerate };
         } catch {
             return defaultPaperConfig;
         }

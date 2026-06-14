@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-const CURRENT_MARKER = "# [at-book] auto-generated hook v2";
+const CURRENT_MARKER = "# [at-book] auto-generated hook v3";
 const ANY_MARKER     = "# [at-book] auto-generated hook";
 
 const HOOK_CONTENT = `#!/bin/sh
@@ -32,9 +32,8 @@ targets=$(node -e "
         for (const cfgPath of configs) {
             try {
                 const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
-                const dir = path.dirname(cfgPath);
                 if (Array.isArray(cfg.autoGenerate)) {
-                    targets.push(...cfg.autoGenerate.map(f => path.join(dir, f)));
+                    targets.push(...cfg.autoGenerate);
                 }
             } catch (_) {}
         }
@@ -42,14 +41,16 @@ targets=$(node -e "
     } catch (_) {}
 " 2>/dev/null)
 
+if [ -z "$targets" ]; then
+    exit 0
+fi
+
 echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..."
 for file in $changed; do
     if [ ! -f "$file" ]; then
         continue
     fi
-    if [ -n "$targets" ]; then
-        echo "$targets" | grep -qF "$file" || continue
-    fi
+    echo "$targets" | grep -qxF "$file" || continue
     at-book "$file" && echo "[at-book] $file → 生成完了"
 done
 `;

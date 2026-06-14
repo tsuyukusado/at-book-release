@@ -1,22 +1,41 @@
 #!/bin/sh
-# .atb ファイルが変更されていたら PDF を自動生成する
+# [at-book] auto-generated hook v3
 changed=$(git diff-tree --no-commit-id -r --name-only HEAD | grep '\.atb$')
 if [ -z "$changed" ]; then
     exit 0
 fi
 
-# at-book.config.json の autoGenerate で対象ファイルを絞り込む
-targets=""
-if [ -f "at-book.config.json" ]; then
-    targets=$(node -e "
-        try {
-            const fs = require('fs');
-            const cfg = JSON.parse(fs.readFileSync('at-book.config.json', 'utf-8'));
-            if (Array.isArray(cfg.autoGenerate) && cfg.autoGenerate.length > 0) {
-                process.stdout.write(cfg.autoGenerate.join('\n'));
-            }
-        } catch (_) {}
-    " 2>/dev/null)
+targets=$(node -e "
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        function findConfigs(dir, results) {
+            try {
+                for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+                    if (e.name === 'node_modules' || e.name === '.git' || e.name === 'dist') continue;
+                    const full = path.join(dir, e.name);
+                    if (e.isDirectory()) findConfigs(full, results);
+                    else if (e.name === 'at-book.config.json') results.push(full);
+                }
+            } catch (_) {}
+        }
+        const configs = [];
+        findConfigs('.', configs);
+        const targets = [];
+        for (const cfgPath of configs) {
+            try {
+                const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+                if (Array.isArray(cfg.autoGenerate)) {
+                    targets.push(...cfg.autoGenerate);
+                }
+            } catch (_) {}
+        }
+        if (targets.length > 0) process.stdout.write(targets.join('\n'));
+    } catch (_) {}
+" 2>/dev/null)
+
+if [ -z "$targets" ]; then
+    exit 0
 fi
 
 echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..."
@@ -24,8 +43,6 @@ for file in $changed; do
     if [ ! -f "$file" ]; then
         continue
     fi
-    if [ -n "$targets" ]; then
-        echo "$targets" | grep -qF "$file" || continue
-    fi
+    echo "$targets" | grep -qxF "$file" || continue
     at-book "$file" && echo "[at-book] $file → 生成完了"
 done

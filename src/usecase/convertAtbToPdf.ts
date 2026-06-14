@@ -1,5 +1,6 @@
 import * as path from "path";
 import type { PaperConfig } from "../domain";
+import { countChars } from "./countChars";
 
 export interface AtbConverter {
     convert(atbText: string, config: PaperConfig): string;
@@ -25,7 +26,7 @@ interface Deps {
 }
 
 export interface ConvertInput  { atbPath: string }
-export interface ConvertOutput { pdfPath: string; pageCount: number; config: PaperConfig }
+export interface ConvertOutput { pdfPath: string; pageCount: number; charCount: number; config: PaperConfig }
 
 export async function convertAtbToPdf(
     deps: Deps,
@@ -41,5 +42,6 @@ export async function convertAtbToPdf(
     const pdfPath = path.join('dist', 'at-book', `${base}-honbun.pdf`);
 
     const { pageCount } = await deps.latexRunner.compile(texContent, pdfPath);
-    return { pdfPath, pageCount, config };
+    const charCount = countChars(atbText);
+    return { pdfPath, pageCount, charCount, config };
 }

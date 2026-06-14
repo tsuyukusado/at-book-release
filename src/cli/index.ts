@@ -3,7 +3,7 @@ import * as path from "path";
 import { convertAtbToPdf } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
-import { nodeFileReader, nodeLuaLatexRunner, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs } from "../infrastructure";
+import { nodeFileReader, nodeLuaLatexRunner, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs, appendCharCount } from "../infrastructure";
 
 async function runCover(args: string[]): Promise<void> {
     // 使い方: at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]
@@ -60,8 +60,10 @@ async function runCover(args: string[]): Promise<void> {
     console.log(`  背幅       : ${Math.round(spineWidth * 100) / 100}mm`);
 }
 
+const CHAR_COUNT_LOG = 'char-count.log';
+
 async function runConvert(atbPath: string): Promise<void> {
-    const { pdfPath, pageCount, config } = await convertAtbToPdf(
+    const { pdfPath, pageCount, charCount, config } = await convertAtbToPdf(
         {
             converter:    atbConverter,
             fileReader:   nodeFileReader,
@@ -71,6 +73,9 @@ async function runConvert(atbPath: string): Promise<void> {
         { atbPath }
     );
     console.log(`生成完了: ${pdfPath}`);
+    console.log(`  総文字数 : ${charCount.toLocaleString('ja-JP')}文字`);
+
+    await appendCharCount(CHAR_COUNT_LOG, { atbPath, charCount });
 
     const { bodyPaperThicknessMm, coverPaperThicknessMm } = config;
     if (bodyPaperThicknessMm && coverPaperThicknessMm && pageCount > 0) {

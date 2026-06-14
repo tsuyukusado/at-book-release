@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-const CURRENT_MARKER = "# [at-book] auto-generated hook v4";
+const CURRENT_MARKER = "# [at-book] auto-generated hook v5";
 const ANY_MARKER     = "# [at-book] auto-generated hook";
 
 const HOOK_CONTENT = `#!/bin/sh
@@ -46,27 +46,18 @@ if [ -z "$targets" ]; then
 fi
 
 echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..."
+PROJ_DIR=$(pwd)
 for file in $changed; do
     if [ ! -f "$file" ]; then
         continue
     fi
     echo "$targets" | grep -qxF "$file" || continue
-    LOG="/tmp/at-book-$(basename "$file" .atb).log"
+    AFILE="$PROJ_DIR/$file"
     if [ -w /dev/tty ]; then
         at-book "$file" >/dev/tty 2>&1
-        STATUS=$?
+        [ $? -eq 0 ] && echo "[at-book] $file → 生成完了" >/dev/tty || echo "[at-book] $file → 生成失敗" >/dev/tty
     else
-        at-book "$file" >"$LOG" 2>&1
-        STATUS=$?
-    fi
-    AT_BOOK_BASENAME=$(basename "$file" .atb)
-    if [ $STATUS -eq 0 ]; then
-        echo "[at-book] $file → 生成完了"
-        osascript -e "display notification \\"$AT_BOOK_BASENAME の PDF を生成しました\\" with title \\"at-book\\"" 2>/dev/null || true
-    else
-        echo "[at-book] $file → 生成失敗"
-        [ -f "$LOG" ] && echo "[at-book] ログ: $LOG"
-        osascript -e "display notification \\"PDF 生成失敗: $AT_BOOK_BASENAME\\" with title \\"at-book [エラー]\\"" 2>/dev/null || true
+        osascript -e "tell application \\"Terminal\\"" -e "activate" -e "do script \\"cd '$PROJ_DIR' && at-book '$AFILE'\\"" -e "end tell" 2>/dev/null || true
     fi
 done
 `;

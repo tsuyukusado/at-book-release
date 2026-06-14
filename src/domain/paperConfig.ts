@@ -6,6 +6,7 @@ export interface PaperConfig {
     writingMode:            WritingMode;
     bodyPaperThicknessMm?:  number;
     coverPaperThicknessMm?: number;
+    autoGenerate?:          string[];
 }
 
 export const defaultPaperConfig: PaperConfig = {

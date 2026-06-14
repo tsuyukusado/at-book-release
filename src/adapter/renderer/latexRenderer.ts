@@ -57,6 +57,9 @@ function buildPreamble(config: PaperConfig): string {
             : ['\\fancypagestyle{lastpage}{\\fancyhf{}\\fancyfoot[RO]{\\rlap{\\hspace{3mm}\\thepage}}\\fancyfoot[LE]{\\llap{\\thepage\\hspace{3mm}}}\\fancyfoot[C]{\\tiny Created with at-book. Copyright \\textcopyright\\ 2026 tsuyukusado. MIT License.}\\renewcommand{\\headrulewidth}{0pt}}']),
         '\\renewcommand{\\contentsname}{目次}',
         '\\setcounter{tocdepth}{2}',
+        ...(isVertical
+            ? ['\\newcommand{\\tatechuyoko}[1]{\\leavevmode\\hbox{\\textdir TLT #1}}']
+            : []),
         '\\makeatletter',
         '\\renewcommand{\\tableofcontents}{\\par\\vspace{0.2em}\\noindent{\\bfseries\\fontsize{18}{20}\\selectfont\\contentsname}\\par\\vspace{0.1em}\\@starttoc{toc}}',
         ...(isVertical

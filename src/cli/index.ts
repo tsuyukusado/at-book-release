@@ -3,7 +3,7 @@ import * as path from "path";
 import { convertAtbToPdf } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
-import { nodeFileReader, nodeLuaLatexRunner, nodeConfigReader, nodeFileWriter } from "../infrastructure";
+import { nodeFileReader, nodeLuaLatexRunner, nodeConfigReader, nodeFileWriter, ensureHookInstalled } from "../infrastructure";
 
 async function runCover(args: string[]): Promise<void> {
     // 使い方: at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]
@@ -96,6 +96,8 @@ async function runConvert(atbPath: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+    ensureHookInstalled();
+
     const [subcommand, ...rest] = process.argv.slice(2);
 
     if (!subcommand) {

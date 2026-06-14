@@ -2,18 +2,19 @@ import { parseInline } from "../parser";
 import type { InlineNode, ParsedNode } from "../parser";
 import type { PaperConfig } from "../../domain";
 
-function renderInlineNode(node: InlineNode): string {
+function renderInlineNode(node: InlineNode, isVertical: boolean): string {
     switch (node.kind) {
-        case 'text':     return node.text;
-        case 'ruby':     return `\\ruby{${node.text}}{${node.ruby}}`;
-        case 'kenten':   return `\\kenten{${node.text}}`;
-        case 'dash':     return '——';
-        case 'ellipsis': return '…'.repeat(node.level);
+        case 'text':        return node.text;
+        case 'ruby':        return `\\ruby{${node.text}}{${node.ruby}}`;
+        case 'kenten':      return `\\kenten{${node.text}}`;
+        case 'dash':        return '——';
+        case 'ellipsis':    return '…'.repeat(node.level);
+        case 'tatechuyoko': return isVertical ? `\\tatechuyoko{${node.text}}` : node.text;
     }
 }
 
-function renderInline(text: string): string {
-    return parseInline(text).map(renderInlineNode).join('');
+function renderInline(text: string, isVertical: boolean): string {
+    return parseInline(text).map(node => renderInlineNode(node, isVertical)).join('');
 }
 
 function buildPreamble(config: PaperConfig): string {
@@ -107,7 +108,7 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                 listDepth--;
                 lines.push('\\end{itemize}');
             }
-            lines.push(`\\item ${renderInline(node.text)}`);
+            lines.push(`\\item ${renderInline(node.text, isVertical)}`);
             continue;
         }
 
@@ -123,7 +124,7 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                     h2 = 0;
                     const h1str = isVertical ? toKanjiNumber(h1) : `${h1}`;
                     const h1sep = isVertical ? '　' : ' ';
-                    const h1title = `${h1str}${h1sep}${renderInline(node.text)}`;
+                    const h1title = `${h1str}${h1sep}${renderInline(node.text, isVertical)}`;
                     lines.push('\\clearpage');
                     lines.push(`\\par\\vspace{0.2em}\\noindent{\\bfseries\\fontsize{18}{20}\\selectfont ${h1title}}\\par\\vspace{0.1em}`);
                     lines.push(`\\addcontentsline{toc}{section}{${h1title}}`);
@@ -133,7 +134,7 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                     const h2str  = isVertical ? toKanjiNumber(h2) : `${h2}`;
                     const sep    = isVertical ? '・' : '-';
                     const h2sep  = isVertical ? '　' : ' ';
-                    const h2title = `${h1str2}${sep}${h2str}${h2sep}${renderInline(node.text)}`;
+                    const h2title = `${h1str2}${sep}${h2str}${h2sep}${renderInline(node.text, isVertical)}`;
                     lines.push(`\\par\\vspace{0.1em}\\noindent{\\bfseries ${h2title}}\\par\\vspace{0.1em}`);
                     lines.push(`\\addcontentsline{toc}{subsection}{${h2title}}`);
                 }
@@ -145,7 +146,7 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                 lines.push('\\clearpage');
                 break;
             case 'paragraph':
-                lines.push(`\\noindent\\hspace{\\parindent}${renderInline(node.text)}\\par`);
+                lines.push(`\\noindent\\hspace{\\parindent}${renderInline(node.text, isVertical)}\\par`);
                 break;
             case 'blank':
                 lines.push('\\vspace{\\baselineskip}');

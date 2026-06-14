@@ -99,9 +99,16 @@ async function main(): Promise<void> {
     const [subcommand, ...rest] = process.argv.slice(2);
 
     if (!subcommand) {
-        console.error("使い方: at-book <file.atb>");
-        console.error("        at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]");
-        process.exit(1);
+        const config = await nodeConfigReader.read('.');
+        if (!config.autoGenerate || config.autoGenerate.length === 0) {
+            console.error("使い方: at-book <file.atb>");
+            console.error("        at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]");
+            process.exit(1);
+        }
+        for (const atbPath of config.autoGenerate) {
+            await runConvert(atbPath);
+        }
+        return;
     }
 
     if (subcommand === "cover") {

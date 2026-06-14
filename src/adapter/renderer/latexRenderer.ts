@@ -122,7 +122,8 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                     h1++;
                     h2 = 0;
                     const h1str = isVertical ? toKanjiNumber(h1) : `${h1}`;
-                    const h1title = `${h1str} ${renderInline(node.text)}`;
+                    const h1sep = isVertical ? '　' : ' ';
+                    const h1title = `${h1str}${h1sep}${renderInline(node.text)}`;
                     lines.push('\\clearpage');
                     lines.push(`\\par\\vspace{0.2em}\\noindent{\\bfseries\\fontsize{18}{20}\\selectfont ${h1title}}\\par\\vspace{0.1em}`);
                     lines.push(`\\addcontentsline{toc}{section}{${h1title}}`);
@@ -131,7 +132,8 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                     const h1str2 = isVertical ? toKanjiNumber(h1) : `${h1}`;
                     const h2str  = isVertical ? toKanjiNumber(h2) : `${h2}`;
                     const sep    = isVertical ? '・' : '-';
-                    const h2title = `${h1str2}${sep}${h2str} ${renderInline(node.text)}`;
+                    const h2sep  = isVertical ? '　' : ' ';
+                    const h2title = `${h1str2}${sep}${h2str}${h2sep}${renderInline(node.text)}`;
                     lines.push(`\\par\\vspace{0.1em}\\noindent{\\bfseries ${h2title}}\\par\\vspace{0.1em}`);
                     lines.push(`\\addcontentsline{toc}{subsection}{${h2title}}`);
                 }

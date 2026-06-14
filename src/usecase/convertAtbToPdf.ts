@@ -11,7 +11,7 @@ export interface FileReader {
 }
 
 export interface LatexRunner {
-    compile(texContent: string, outputPath: string, workDir?: string): Promise<{ pageCount: number }>;
+    compile(texContent: string, outputPath: string): Promise<{ pageCount: number }>;
 }
 
 export interface ConfigReader {
@@ -41,8 +41,7 @@ export async function convertAtbToPdf(
     const base    = path.basename(input.atbPath, '.atb');
     const pdfPath = path.join('dist', 'at-book', `${base}-honbun.pdf`);
 
-    const workDir = path.dirname(path.resolve(input.atbPath));
-    const { pageCount } = await deps.latexRunner.compile(texContent, pdfPath, workDir);
+    const { pageCount } = await deps.latexRunner.compile(texContent, pdfPath);
     const charCount = countChars(atbText);
     return { pdfPath, pageCount, charCount, config };
 }

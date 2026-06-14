@@ -3,7 +3,7 @@ import { writeFile, mkdir, readFile } from "fs/promises";
 import * as path from "path";
 import type { LatexRunner } from "../usecase";
 
-function spawnAsync(cmd: string, args: string[], env: NodeJS.ProcessEnv, cwd?: string): Promise<void> {
+function spawnAsync(cmd: string, args: string[], env: NodeJS.ProcessEnv, cwd: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const child = spawn(cmd, args, { stdio: 'inherit', env, cwd });
         child.on('close', (code) => {
@@ -24,7 +24,7 @@ async function parsePageCount(logPath: string): Promise<number> {
 }
 
 export const nodeLuaLatexRunner: LatexRunner = {
-    async compile(texContent: string, outputPath: string, workDir?: string): Promise<{ pageCount: number }> {
+    async compile(texContent: string, outputPath: string): Promise<{ pageCount: number }> {
         const dir     = path.dirname(outputPath);
         const base    = path.basename(outputPath, '.pdf');
         const texPath = path.join(dir, `${base}.tex`);
@@ -40,8 +40,8 @@ export const nodeLuaLatexRunner: LatexRunner = {
 
         await mkdir(absDir, { recursive: true });
         await writeFile(absTexPath, texContent, 'utf-8');
-        await spawnAsync('lualatex', args, env, workDir);
-        await spawnAsync('lualatex', args, env, workDir);
+        await spawnAsync('lualatex', args, env, absDir);
+        await spawnAsync('lualatex', args, env, absDir);
 
         const pageCount = await parsePageCount(logPath);
         return { pageCount };

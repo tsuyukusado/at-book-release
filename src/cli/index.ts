@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import * as path from "path";
+import { execSync } from "child_process";
 import { convertAtbToPdf } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
 import { nodeFileReader, nodeLuaLatexRunner, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs, appendCharCount } from "../infrastructure";
+import { countChars } from "../usecase/countChars";
 
 async function runCover(args: string[]): Promise<void> {
     // 使い方: at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]
@@ -61,6 +63,26 @@ async function runCover(args: string[]): Promise<void> {
 }
 
 const CHAR_COUNT_LOG = 'char-count.log';
+
+async function runCountChars(atbPath: string): Promise<void> {
+    let atbText: string;
+    try {
+        atbText = execSync(`git show HEAD:${atbPath}`, { encoding: 'utf-8' });
+    } catch {
+        atbText = await nodeFileReader.read(atbPath);
+    }
+
+    let commitHash: string | undefined;
+    let commitMessage: string | undefined;
+    try {
+        commitHash   = execSync('git log -1 --format=%H', { encoding: 'utf-8' }).trim();
+        commitMessage = execSync('git log -1 --format=%s', { encoding: 'utf-8' }).trim();
+    } catch {}
+
+    const charCount = countChars(atbText);
+    console.log(`文字数: ${charCount.toLocaleString('ja-JP')}文字 (${atbPath})`);
+    await appendCharCount(CHAR_COUNT_LOG, { atbPath, charCount, commitHash, commitMessage });
+}
 
 async function runConvert(atbPath: string): Promise<void> {
     const { pdfPath, pageCount, charCount, config } = await convertAtbToPdf(
@@ -126,6 +148,12 @@ async function main(): Promise<void> {
 
     if (subcommand === "cover") {
         await runCover(rest);
+    } else if (subcommand === "count") {
+        if (!rest[0]) {
+            console.error("使い方: at-book count <file.atb>");
+            process.exit(1);
+        }
+        await runCountChars(rest[0]);
     } else {
         await runConvert(subcommand);
     }

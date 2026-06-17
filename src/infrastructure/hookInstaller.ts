@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-const CURRENT_MARKER = "# [at-book] auto-generated hook v5";
+const CURRENT_MARKER = "# [at-book] auto-generated hook v6";
 const ANY_MARKER     = "# [at-book] auto-generated hook";
 
 const HOOK_CONTENT = `#!/bin/sh
@@ -45,16 +45,19 @@ if [ -z "$targets" ]; then
     exit 0
 fi
 
-echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..."
 PROJ_DIR=$(pwd)
 for file in $changed; do
     if [ ! -f "$file" ]; then
         continue
     fi
     echo "$targets" | grep -qxF "$file" || continue
+
+    at-book count "$file" 2>/dev/null || true
+
     AFILE="$PROJ_DIR/$file"
+    echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..."
     if [ -w /dev/tty ]; then
-        at-book "$file" >/dev/tty 2>&1
+        at-book "$AFILE" >/dev/tty 2>&1
         [ $? -eq 0 ] && echo "[at-book] $file → 生成完了" >/dev/tty || echo "[at-book] $file → 生成失敗" >/dev/tty
     else
         osascript -e "tell application \\"Terminal\\"" -e "activate" -e "do script \\"cd '$PROJ_DIR' && at-book '$AFILE'\\"" -e "end tell" 2>/dev/null || true

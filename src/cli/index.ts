@@ -64,6 +64,17 @@ async function runCover(args: string[]): Promise<void> {
 
 const CHAR_COUNT_LOG = 'char-count.log';
 
+async function readExistingPageCount(atbPath: string): Promise<number | undefined> {
+    try {
+        const base = path.basename(atbPath, '.atb');
+        const logPath = path.join('dist', 'at-book', `${base}-honbun.log`);
+        const log = await nodeFileReader.read(logPath);
+        const m = log.match(/Output written on .+?\((\d+) pages?,/);
+        if (m?.[1]) return parseInt(m[1], 10);
+    } catch {}
+    return undefined;
+}
+
 async function runCountChars(atbPath: string): Promise<void> {
     let atbText: string;
     try {
@@ -75,13 +86,16 @@ async function runCountChars(atbPath: string): Promise<void> {
     let commitHash: string | undefined;
     let commitMessage: string | undefined;
     try {
-        commitHash   = execSync('git log -1 --format=%H', { encoding: 'utf-8' }).trim();
+        commitHash    = execSync('git log -1 --format=%H', { encoding: 'utf-8' }).trim();
         commitMessage = execSync('git log -1 --format=%s', { encoding: 'utf-8' }).trim();
     } catch {}
 
     const charCount = countChars(atbText);
+    const pageCount = await readExistingPageCount(atbPath);
+
     console.log(`文字数: ${charCount.toLocaleString('ja-JP')}文字 (${atbPath})`);
-    await appendCharCount(CHAR_COUNT_LOG, { atbPath, charCount, commitHash, commitMessage });
+    if (pageCount !== undefined) console.log(`ページ数: ${pageCount}p`);
+    await appendCharCount(CHAR_COUNT_LOG, { atbPath, charCount, pageCount, commitHash, commitMessage });
 }
 
 async function runConvert(atbPath: string): Promise<void> {
@@ -97,7 +111,7 @@ async function runConvert(atbPath: string): Promise<void> {
     console.log(`生成完了: ${pdfPath}`);
     console.log(`  総文字数 : ${charCount.toLocaleString('ja-JP')}文字`);
 
-    await appendCharCount(CHAR_COUNT_LOG, { atbPath, charCount });
+    await appendCharCount(CHAR_COUNT_LOG, { atbPath, charCount, pageCount });
 
     const { bodyPaperThicknessMm, coverPaperThicknessMm } = config;
     if (bodyPaperThicknessMm && coverPaperThicknessMm && pageCount > 0) {

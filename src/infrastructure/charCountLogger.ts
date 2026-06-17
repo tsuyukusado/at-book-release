@@ -9,6 +9,7 @@ function formatDate(date: Date): string {
 export async function appendCharCount(logPath: string, entry: {
     atbPath: string;
     charCount: number;
+    pageCount?: number;
     commitHash?: string;
     commitMessage?: string;
 }): Promise<void> {
@@ -16,10 +17,10 @@ export async function appendCharCount(logPath: string, entry: {
     if (entry.commitHash) {
         rows.push(`コミット: ${entry.commitHash.slice(0, 7)} ${entry.commitMessage ?? ''}`.trimEnd());
     }
-    rows.push(
-        `ファイル: ${entry.atbPath}`,
-        `総文字数: ${entry.charCount.toLocaleString('ja-JP')}文字`,
-        '',
-    );
+    rows.push(`ファイル: ${entry.atbPath}`);
+    if (entry.pageCount !== undefined && entry.pageCount > 0) {
+        rows.push(`ページ数: ${entry.pageCount}p`);
+    }
+    rows.push(`総文字数: ${entry.charCount.toLocaleString('ja-JP')}文字`, '');
     await appendFile(logPath, rows.join('\n'), 'utf-8');
 }

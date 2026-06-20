@@ -3,6 +3,7 @@ dist/
 out/
 *.ltjruby
 *.log
+.at-book-count.state
 *.aux
 *.toc
 CLAUDE.md

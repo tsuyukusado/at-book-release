@@ -2,18 +2,19 @@ import { parseInline } from "../parser";
 import type { InlineNode, ParsedNode } from "../parser";
 import type { PaperConfig } from "../../domain";
 
-function renderInlineNode(node: InlineNode): string {
+function renderInlineNode(node: InlineNode, isVertical: boolean): string {
     switch (node.kind) {
-        case 'text':     return node.text;
-        case 'ruby':     return `\\ruby{${node.text}}{${node.ruby}}`;
-        case 'kenten':   return `\\kenten{${node.text}}`;
-        case 'dash':     return '——';
-        case 'ellipsis': return '…'.repeat(node.level);
+        case 'text':        return node.text;
+        case 'ruby':        return `\\ruby{${node.text}}{${node.ruby}}`;
+        case 'kenten':      return `\\kenten{${node.text}}`;
+        case 'dash':        return '——';
+        case 'ellipsis':    return '…'.repeat(node.level);
+        case 'tatechuyoko': return isVertical ? `\\tatechuyoko{${node.text.replace(/！/g, '!').replace(/？/g, '?')}}` : node.text;
     }
 }
 
-function renderInline(text: string): string {
-    return parseInline(text).map(renderInlineNode).join('');
+function renderInline(text: string, isVertical: boolean): string {
+    return parseInline(text).map(node => renderInlineNode(node, isVertical)).join('');
 }
 
 function buildPreamble(config: PaperConfig): string {
@@ -59,7 +60,9 @@ function buildPreamble(config: PaperConfig): string {
         '\\setcounter{tocdepth}{2}',
         '\\makeatletter',
         '\\renewcommand{\\tableofcontents}{\\par\\vspace{0.2em}\\noindent{\\bfseries\\fontsize{18}{20}\\selectfont\\contentsname}\\par\\vspace{0.1em}\\@starttoc{toc}}',
-        '\\def\\@dashedtocline#1#2#3#4#5{\\ifnum #1>\\c@tocdepth\\else\\vskip\\z@\\@plus.2\\p@{\\leftskip #2\\relax\\rightskip\\@tocrmarg\\parfillskip-\\rightskip\\parindent #2\\relax\\@afterindenttrue\\interlinepenalty\\@M\\leavevmode\\@tempdima #3\\relax\\advance\\leftskip\\@tempdima\\null\\nobreak\\hskip-\\leftskip{#4}\\nobreak\\leaders\\hbox{\\normalfont—}\\hfill\\nobreak\\hb@xt@\\@pnumwidth{\\hfil\\normalfont\\normalcolor #5}\\par}\\fi}',
+        ...(isVertical
+            ? ['\\def\\@dashedtocline#1#2#3#4#5{\\ifnum #1>\\c@tocdepth\\else\\vskip\\z@\\@plus.2\\p@{\\leftskip #2\\relax\\rightskip\\@tocrmarg\\parfillskip-\\rightskip\\parindent #2\\relax\\@afterindenttrue\\interlinepenalty\\@M\\leavevmode\\@tempdima #3\\relax\\advance\\leftskip\\@tempdima\\null\\nobreak\\hskip-\\leftskip{#4}\\nobreak\\leaders\\hbox{\\normalfont—}\\hfill\\nobreak\\hb@xt@\\@pnumwidth{\\hfil\\normalfont\\normalcolor \\rensuji{#5}}\\par}\\fi}']
+            : ['\\def\\@dashedtocline#1#2#3#4#5{\\ifnum #1>\\c@tocdepth\\else\\vskip\\z@\\@plus.2\\p@{\\leftskip #2\\relax\\rightskip\\@tocrmarg\\parfillskip-\\rightskip\\parindent #2\\relax\\@afterindenttrue\\interlinepenalty\\@M\\leavevmode\\@tempdima #3\\relax\\advance\\leftskip\\@tempdima\\null\\nobreak\\hskip-\\leftskip{#4}\\nobreak\\leaders\\hbox{\\normalfont—}\\hfill\\nobreak\\hb@xt@\\@pnumwidth{\\hfil\\normalfont\\normalcolor #5}\\par}\\fi}']),
         ...(isVertical
             ? [
                 '\\renewcommand*{\\l@section}{\\@dashedtocline{1}{0\\zw}{3\\zw}}',
@@ -67,6 +70,9 @@ function buildPreamble(config: PaperConfig): string {
             ]
             : ['\\renewcommand*{\\l@subsection}{\\@tempdima\\jsc@tocl@width\\@dashedtocline{2}{\\@tempdima}{3.683\\zw}}']),
         '\\makeatother',
+        ...(isVertical
+            ? ['\\newcommand{\\tatechuyoko}[1]{\\leavevmode\\hbox{\\yoko #1}}']
+            : []),
         '\\begin{document}',
         '\\AtEndDocument{\\thispagestyle{lastpage}}',
         '\\setlength{\\parskip}{0pt}',
@@ -105,7 +111,7 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                 listDepth--;
                 lines.push('\\end{itemize}');
             }
-            lines.push(`\\item ${renderInline(node.text)}`);
+            lines.push(`\\item ${renderInline(node.text, isVertical)}`);
             continue;
         }
 
@@ -120,7 +126,8 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                     h1++;
                     h2 = 0;
                     const h1str = isVertical ? toKanjiNumber(h1) : `${h1}`;
-                    const h1title = `${h1str} ${renderInline(node.text)}`;
+                    const h1sep = isVertical ? '　' : ' ';
+                    const h1title = `${h1str}${h1sep}${renderInline(node.text, isVertical)}`;
                     lines.push('\\clearpage');
                     lines.push(`\\par\\vspace{0.2em}\\noindent{\\bfseries\\fontsize{18}{20}\\selectfont ${h1title}}\\par\\vspace{0.1em}`);
                     lines.push(`\\addcontentsline{toc}{section}{${h1title}}`);
@@ -129,7 +136,8 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                     const h1str2 = isVertical ? toKanjiNumber(h1) : `${h1}`;
                     const h2str  = isVertical ? toKanjiNumber(h2) : `${h2}`;
                     const sep    = isVertical ? '・' : '-';
-                    const h2title = `${h1str2}${sep}${h2str} ${renderInline(node.text)}`;
+                    const h2sep  = isVertical ? '　' : ' ';
+                    const h2title = `${h1str2}${sep}${h2str}${h2sep}${renderInline(node.text, isVertical)}`;
                     lines.push(`\\par\\vspace{0.1em}\\noindent{\\bfseries ${h2title}}\\par\\vspace{0.1em}`);
                     lines.push(`\\addcontentsline{toc}{subsection}{${h2title}}`);
                 }
@@ -141,7 +149,7 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                 lines.push('\\clearpage');
                 break;
             case 'paragraph':
-                lines.push(`\\noindent\\hspace{\\parindent}${renderInline(node.text)}\\par`);
+                lines.push(`\\noindent\\hspace{\\parindent}${renderInline(node.text, isVertical)}\\par`);
                 break;
             case 'blank':
                 lines.push('\\vspace{\\baselineskip}');

@@ -1,16 +1,17 @@
 import { keySymbol } from "../../domain";
 import type { ruby, kenten, dash, ellipsis } from "../../domain";
 
-export type TextNode     = { kind: 'text';     text: string };
-export type RubyNode     = { kind: 'ruby'     } & ruby;
-export type KentenNode   = { kind: 'kenten'   } & kenten;
-export type DashNode     = { kind: 'dash'     } & dash;
-export type EllipsisNode = { kind: 'ellipsis' } & ellipsis;
+export type TextNode        = { kind: 'text';        text: string };
+export type RubyNode        = { kind: 'ruby'        } & ruby;
+export type KentenNode      = { kind: 'kenten'      } & kenten;
+export type DashNode        = { kind: 'dash'        } & dash;
+export type EllipsisNode    = { kind: 'ellipsis'    } & ellipsis;
+export type TateChuYokoNode = { kind: 'tatechuyoko'; text: string };
 
-export type InlineNode = TextNode | RubyNode | KentenNode | DashNode | EllipsisNode;
+export type InlineNode = TextNode | RubyNode | KentenNode | DashNode | EllipsisNode | TateChuYokoNode;
 
-// ＠text（ruby/・） または ーー以上 または ・・以上（中黒２個以上→三点リーダー）
-const INLINE_RE = /＠([^（）\n]+)（([^）\n]*)）|ーー+|・・+/g;
+// ＠text（ruby/・） または ーー以上 または ・・以上（中黒２個以上→三点リーダー） または ！？の組み合わせ（縦中横）
+const INLINE_RE = /＠([^（）\n]+)（([^）\n]*)）|ーー+|・・+|[！？]{2,}/g;
 
 export function parseInline(text: string): InlineNode[] {
     const nodes: InlineNode[] = [];
@@ -33,8 +34,10 @@ export function parseInline(text: string): InlineNode[] {
             }
         } else if (match[0].startsWith('ー')) {
             nodes.push({ kind: 'dash', keySymbol, text: 'ー', level: match[0].length });
-        } else {
+        } else if (match[0].startsWith('・')) {
             nodes.push({ kind: 'ellipsis', keySymbol, text: '・', level: match[0].length });
+        } else {
+            nodes.push({ kind: 'tatechuyoko', text: match[0] });
         }
 
         lastIndex = matchIndex + match[0].length;

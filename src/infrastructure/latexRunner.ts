@@ -1,10 +1,18 @@
-import { exec } from "child_process";
+import { spawn } from "child_process";
 import { writeFile, mkdir, readFile } from "fs/promises";
-import { promisify } from "util";
 import * as path from "path";
 import type { LatexRunner } from "../usecase";
 
-const execAsync = promisify(exec);
+function spawnAsync(cmd: string, args: string[], env: NodeJS.ProcessEnv, cwd: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const child = spawn(cmd, args, { stdio: 'inherit', env, cwd });
+        child.on('close', (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(`lualatex exited with code ${code}`));
+        });
+        child.on('error', reject);
+    });
+}
 
 async function parsePageCount(logPath: string): Promise<number> {
     try {
@@ -24,12 +32,16 @@ export const nodeLuaLatexRunner: LatexRunner = {
 
         const fontsDir = path.resolve(__dirname, '../../fonts');
 
-        await mkdir(dir, { recursive: true });
-        await writeFile(texPath, texContent, 'utf-8');
-        const cmd = `lualatex -interaction=nonstopmode -output-directory="${dir}" "${texPath}"`;
-        const env = { ...process.env, OSFONTDIR: fontsDir };
-        await execAsync(cmd, { env, cwd: dir });
-        await execAsync(cmd, { env, cwd: dir });
+        const absDir     = path.resolve(dir);
+        const absTexPath = path.resolve(texPath);
+
+        const args = ['-interaction=nonstopmode', `-output-directory=${absDir}`, absTexPath];
+        const env  = { ...process.env, OSFONTDIR: fontsDir };
+
+        await mkdir(absDir, { recursive: true });
+        await writeFile(absTexPath, texContent, 'utf-8');
+        await spawnAsync('lualatex', args, env, absDir);
+        await spawnAsync('lualatex', args, env, absDir);
 
         const pageCount = await parsePageCount(logPath);
         return { pageCount };

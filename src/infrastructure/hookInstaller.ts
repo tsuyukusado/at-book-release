@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-const CURRENT_MARKER = "# [at-book] auto-generated hook v10";
+const CURRENT_MARKER = "# [at-book] auto-generated hook v11";
 const ANY_MARKER     = "# [at-book] auto-generated hook";
 
 const HOOK_CONTENT = `#!/bin/sh
@@ -65,7 +65,7 @@ for file in $changed; do
     fi
     echo "$targets" | grep -qxF "$file" || continue
 
-    at-book count "$file" || true
+    at-book count --committed "$file" || true
 
     AFILE="$PROJ_DIR/$file"
     LOG="$PROJ_DIR/.at-book-generate.log"

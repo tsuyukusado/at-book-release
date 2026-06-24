@@ -21,12 +21,18 @@ function gitShow(ref: string, atbPath: string): string | undefined {
     return git(`show "${ref}:${atbPath}"`);
 }
 
+// 指定 ref の .atb 内容と現在の文字数を比較して差分を返す。
+// ref に当該ファイルが無ければ新規ファイル扱い（isNew=true）。
+function charDiffFromRef(ref: string, atbPath: string, currentCount: number): { charDiff?: number; isNew: boolean } {
+    const baseText = gitShow(ref, atbPath);
+    if (baseText === undefined) return { isNew: true };
+    return { charDiff: currentCount - countChars(baseText), isNew: false };
+}
+
 // 「前回コミットからの文字数差分」を git から算出する。
 // 親コミットに当該ファイルが無ければ新規ファイル扱い（isNew=true）。
 function charDiffFromParent(commit: string, atbPath: string, currentCount: number): { charDiff?: number; isNew: boolean } {
-    const parentText = gitShow(`${commit}~1`, atbPath);
-    if (parentText === undefined) return { isNew: true };
-    return { charDiff: currentCount - countChars(parentText), isNew: false };
+    return charDiffFromRef(`${commit}~1`, atbPath, currentCount);
 }
 
 async function runCover(args: string[]): Promise<void> {
@@ -159,12 +165,18 @@ async function readExistingPageCount(atbPath: string): Promise<number | undefine
     return undefined;
 }
 
-async function runCountChars(atbPath: string): Promise<void> {
+async function runCountChars(atbPath: string, opts: { fromCommit?: boolean } = {}): Promise<void> {
     atbPath = toRepoRelativePath(atbPath);
     let atbText: string;
-    try {
-        atbText = execSync(`git show HEAD:${atbPath}`, { encoding: 'utf-8' });
-    } catch {
+    if (opts.fromCommit) {
+        // post-commit フックなど: コミットされた版（HEAD）の内容を数える
+        try {
+            atbText = execSync(`git show HEAD:${atbPath}`, { encoding: 'utf-8' });
+        } catch {
+            atbText = await nodeFileReader.read(atbPath);
+        }
+    } else {
+        // 手動実行: 作業ツリーのローカル内容を数える
         atbText = await nodeFileReader.read(atbPath);
     }
 
@@ -179,8 +191,10 @@ async function runCountChars(atbPath: string): Promise<void> {
     const pageCount = await readExistingPageCount(atbPath);
 
     const state = await readCountState(COUNT_STATE_FILE);
+    // 差分の基準: フック実行は親コミット(HEAD~1)と、手動実行は現在のコミット(HEAD)と比較する
+    const baseRef = opts.fromCommit ? "HEAD~1" : "HEAD";
     const { charDiff, isNew } = commitHash
-        ? charDiffFromParent("HEAD", atbPath, charCount)
+        ? charDiffFromRef(baseRef, atbPath, charCount)
         : { charDiff: undefined, isNew: false };
     const prevPage = state.pages[atbPath];
     const pageDiff = (prevPage !== undefined && pageCount !== undefined && pageCount > 0) ? pageCount - prevPage : undefined;
@@ -287,9 +301,13 @@ async function main(): Promise<void> {
     if (subcommand === "cover") {
         await runCover(rest);
     } else if (subcommand === "count") {
-        if (rest[0]) {
+        // --committed: コミット済み(HEAD)の内容を数える（post-commit フックが使用）。
+        // フラグ無し（手動実行）は作業ツリーのローカル内容を数える。
+        const fromCommit = rest.includes("--committed");
+        const fileArg = rest.find(a => !a.startsWith("--"));
+        if (fileArg) {
             // ファイル指定あり: 単体ファイルの現時点の文字数を記録
-            await runCountChars(rest[0]);
+            await runCountChars(fileArg, { fromCommit });
         } else {
             // 引数なし: コミット履歴をたどって記録（初回は全件、以降は新着のみ）
             await runCountHistory();

@@ -1,5 +1,5 @@
 #!/bin/sh
-# [at-book] auto-generated hook v10
+# [at-book] auto-generated hook v11
 changed=$(git diff-tree --no-commit-id -r --name-only HEAD | grep '\.atb$')
 if [ -z "$changed" ]; then
     exit 0
@@ -58,7 +58,7 @@ for file in $changed; do
     fi
     echo "$targets" | grep -qxF "$file" || continue
 
-    at-book count "$file" || true
+    at-book count --committed "$file" || true
 
     AFILE="$PROJ_DIR/$file"
     LOG="$PROJ_DIR/.at-book-generate.log"

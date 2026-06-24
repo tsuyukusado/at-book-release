@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-const CURRENT_MARKER = "# [at-book] auto-generated hook v6";
+const CURRENT_MARKER = "# [at-book] auto-generated hook v7";
 const ANY_MARKER     = "# [at-book] auto-generated hook";
 
 const HOOK_CONTENT = `#!/bin/sh
@@ -33,7 +33,8 @@ targets=$(node -e "
             try {
                 const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
                 if (Array.isArray(cfg.autoGenerate)) {
-                    targets.push(...cfg.autoGenerate);
+                    const dir = path.dirname(cfgPath).replace(/^\\.\\//,'');
+                    targets.push(...cfg.autoGenerate.map(f => dir === '.' ? f : dir + '/' + f));
                 }
             } catch (_) {}
         }

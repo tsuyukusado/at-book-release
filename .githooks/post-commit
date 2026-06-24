@@ -1,5 +1,5 @@
 #!/bin/sh
-# [at-book] auto-generated hook v11
+# [at-book] auto-generated hook v12
 changed=$(git diff-tree --no-commit-id -r --name-only HEAD | grep '\.atb$')
 if [ -z "$changed" ]; then
     exit 0
@@ -61,7 +61,8 @@ for file in $changed; do
     at-book count --committed "$file" || true
 
     AFILE="$PROJ_DIR/$file"
-    LOG="$PROJ_DIR/.at-book-generate.log"
+    LOG="$PROJ_DIR/dist/at-book/.at-book-generate.log"
+    mkdir -p "$PROJ_DIR/dist/at-book"
     if [ "$HAS_TTY" = 1 ]; then
         # 端末からのコミット: 端末に直接出力
         echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..." >/dev/tty

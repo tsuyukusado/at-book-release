@@ -90,7 +90,7 @@ async function runCover(args: string[]): Promise<void> {
     console.log(`  背幅       : ${Math.round(spineWidth * 100) / 100}mm`);
 }
 
-const CHAR_COUNT_LOG = 'char-count.log';
+const CHAR_COUNT_LOG = path.join('dist', 'at-book', 'char-count.log');
 const COUNT_STATE_FILE = path.join('dist', 'at-book', '.at-book-count.state');
 
 // 履歴ウォーク: 初回は全コミット、以降は前回処理した続きから新着コミットだけを処理し、

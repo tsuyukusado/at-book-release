@@ -1,4 +1,5 @@
-import { appendFile } from 'fs/promises';
+import { appendFile, mkdir } from 'fs/promises';
+import { dirname } from 'path';
 
 function formatDate(date: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -37,5 +38,6 @@ export async function appendCharCount(logPath: string, entry: {
         ? ' (新規)'
         : entry.charDiff !== undefined ? ` (前回比 ${formatDiff(entry.charDiff)}文字)` : '';
     rows.push(`総文字数: ${entry.charCount.toLocaleString('ja-JP')}文字${charSuffix}`, '');
+    await mkdir(dirname(logPath), { recursive: true });
     await appendFile(logPath, rows.join('\n'), 'utf-8');
 }

@@ -160,6 +160,7 @@ async function readExistingPageCount(atbPath: string): Promise<number | undefine
 }
 
 async function runCountChars(atbPath: string): Promise<void> {
+    atbPath = toRepoRelativePath(atbPath);
     let atbText: string;
     try {
         atbText = execSync(`git show HEAD:${atbPath}`, { encoding: 'utf-8' });
@@ -189,13 +190,21 @@ async function runCountChars(atbPath: string): Promise<void> {
     if (pageCount !== undefined) console.log(`ページ数: ${pageCount}p`);
     await appendCharCount(CHAR_COUNT_LOG, { atbPath, charCount, pageCount, commitHash, commitMessage, charDiff, pageDiff, isNew });
 
-    if (pageCount !== undefined && pageCount > 0) {
-        state.pages[atbPath] = pageCount;
-        await writeCountState(COUNT_STATE_FILE, state);
-    }
+    state.chars[atbPath] = charCount;
+    if (pageCount !== undefined && pageCount > 0) state.pages[atbPath] = pageCount;
+    await writeCountState(COUNT_STATE_FILE, state);
+}
+
+// 絶対パスをリポジトリルート相対パスに変換する。git show の ref:path 記法は絶対パスを受け付けないため。
+function toRepoRelativePath(p: string): string {
+    const repoRoot = git("rev-parse --show-toplevel")?.trim();
+    if (!repoRoot) return p;
+    const abs = path.isAbsolute(p) ? p : path.resolve(p);
+    return path.relative(repoRoot, abs);
 }
 
 async function runConvert(atbPath: string): Promise<void> {
+    atbPath = toRepoRelativePath(atbPath);
     const { pdfPath, pageCount, charCount, config } = await convertAtbToPdf(
         {
             converter:    atbConverter,
@@ -209,22 +218,21 @@ async function runConvert(atbPath: string): Promise<void> {
     console.log(`  総文字数 : ${charCount.toLocaleString('ja-JP')}文字`);
 
     // 差分を算出してログに記録する。
-    //   文字数: 前回コミット（HEAD~1）との差分を git から算出
-    //   ページ数: 前回 PDF 生成時のページ数（状態ファイル）との差分
+    //   文字数・ページ数ともに前回記録時の値（状態ファイル）との差分
     const state = await readCountState(COUNT_STATE_FILE);
     const commitHash = git("rev-parse HEAD")?.trim();
     const commitMessage = commitHash ? git("log -1 --format=%s")?.trim() : undefined;
-    const { charDiff, isNew } = commitHash
-        ? charDiffFromParent("HEAD", atbPath, charCount)
-        : { charDiff: undefined, isNew: false };
+    const prevChar = state.chars[atbPath];
+    const charDiff = prevChar !== undefined ? charCount - prevChar : undefined;
     const prevPage = state.pages[atbPath];
     const pageDiff = (prevPage !== undefined && pageCount > 0) ? pageCount - prevPage : undefined;
 
     await appendCharCount(CHAR_COUNT_LOG, {
         atbPath, charCount, pageCount,
-        charDiff, pageDiff, isNew, commitHash, commitMessage,
+        charDiff, pageDiff, isNew: false, commitHash, commitMessage,
     });
 
+    state.chars[atbPath] = charCount;
     if (pageCount > 0) state.pages[atbPath] = pageCount;
     if (commitHash) state.lastCommit = commitHash;
     await writeCountState(COUNT_STATE_FILE, state);

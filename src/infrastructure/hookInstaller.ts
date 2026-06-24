@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-const CURRENT_MARKER = "# [at-book] auto-generated hook v7";
+const CURRENT_MARKER = "# [at-book] auto-generated hook v10";
 const ANY_MARKER     = "# [at-book] auto-generated hook";
 
 const HOOK_CONTENT = `#!/bin/sh
@@ -46,6 +46,18 @@ if [ -z "$targets" ]; then
     exit 0
 fi
 
+# /dev/tty に実際に書き込めるか(=端末付きのコミットか)を判定する。
+# [ -w /dev/tty ] はデバイスが存在するだけで真になり、VS Code 等の GUI コミットでも
+# 誤って端末ありと判定してしまうため、実際に open を試して確認する。
+if ( : >/dev/tty ) 2>/dev/null; then HAS_TTY=1; else HAS_TTY=0; fi
+
+# at-book コマンドが PATH に無い場合は静かに失敗せず、復旧方法を案内して終了する
+if ! command -v at-book >/dev/null 2>&1; then
+    MSG="[at-book] ⚠ at-book コマンドが見つかりません。リポジトリで 'npm run setup'（または 'npm link'）を実行してください。PDF 自動生成をスキップします。"
+    if [ "$HAS_TTY" = 1 ]; then echo "$MSG" >/dev/tty; else echo "$MSG"; fi
+    exit 0
+fi
+
 PROJ_DIR=$(pwd)
 for file in $changed; do
     if [ ! -f "$file" ]; then
@@ -53,15 +65,28 @@ for file in $changed; do
     fi
     echo "$targets" | grep -qxF "$file" || continue
 
-    at-book count "$file" 2>/dev/null || true
+    at-book count "$file" || true
 
     AFILE="$PROJ_DIR/$file"
-    echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..."
-    if [ -w /dev/tty ]; then
+    LOG="$PROJ_DIR/.at-book-generate.log"
+    if [ "$HAS_TTY" = 1 ]; then
+        # 端末からのコミット: 端末に直接出力
+        echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..." >/dev/tty
         at-book "$AFILE" >/dev/tty 2>&1
         [ $? -eq 0 ] && echo "[at-book] $file → 生成完了" >/dev/tty || echo "[at-book] $file → 生成失敗" >/dev/tty
-    else
+    elif [ "$(uname)" = "Darwin" ]; then
+        # macOS の GUI コミット: Terminal を開いて生成
         osascript -e "tell application \\"Terminal\\"" -e "activate" -e "do script \\"cd '$PROJ_DIR' && at-book '$AFILE'\\"" -e "end tell" 2>/dev/null || true
+    else
+        # tty の無い GUI コミット(VS Code 等 / Linux): バックグラウンドで生成し結果をログに記録
+        {
+            echo "[at-book] $(date '+%Y-%m-%d %H:%M:%S') 生成開始: $file"
+            if at-book "$AFILE"; then
+                echo "[at-book] $file → 生成完了"
+            else
+                echo "[at-book] $file → 生成失敗"
+            fi
+        } >>"$LOG" 2>&1 </dev/null &
     fi
 done
 `;

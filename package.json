@@ -10,6 +10,7 @@
     "build": "tsc",
     "start": "node dist/cli/index.js",
     "test": "vitest run",
+    "setup": "npm run build && npm link && git config core.hooksPath .githooks",
     "prepare": "npm run build && git config core.hooksPath .githooks"
   },
   "repository": {

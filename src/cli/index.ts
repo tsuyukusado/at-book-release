@@ -91,7 +91,7 @@ async function runCover(args: string[]): Promise<void> {
 }
 
 const CHAR_COUNT_LOG = 'char-count.log';
-const COUNT_STATE_FILE = '.at-book-count.state';
+const COUNT_STATE_FILE = path.join('dist', 'at-book', '.at-book-count.state');
 
 // 履歴ウォーク: 初回は全コミット、以降は前回処理した続きから新着コミットだけを処理し、
 // 各コミットで変更された .atb の文字数と「前回コミットからの差分」を char-count.log に記録する。

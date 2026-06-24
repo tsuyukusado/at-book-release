@@ -1,4 +1,5 @@
-import { readFile, writeFile } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { dirname } from 'path';
 
 // 文字数カウントの進捗状態。
 //   lastCommit: 履歴ウォークで最後に処理したコミット（次回はここから先だけ処理する）
@@ -20,5 +21,6 @@ export async function readCountState(statePath: string): Promise<CountState> {
 }
 
 export async function writeCountState(statePath: string, state: CountState): Promise<void> {
+    await mkdir(dirname(statePath), { recursive: true });
     await writeFile(statePath, JSON.stringify(state, null, 2) + '\n', 'utf-8');
 }

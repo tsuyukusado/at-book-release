@@ -45,35 +45,37 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | INLINE-07 | マークアップ無しのテキスト | `text` 1ノード | inlineParser.test.ts | ⬜ |
 | INLINE-08 | テキスト+ルビ+テキスト混在 | 前後テキストが分割され順序保持 | inlineParser.test.ts | ⬜ |
 
-## 3. LaTeX レンダリング — `adapter/renderer/latexRenderer.ts` `render`
+## 3. HTML/CSS レンダリング — `adapter/renderer/htmlRenderer.ts` `render`
 
-ノード列+設定 → LaTeX 文字列。**lualatex は動かさず文字列を検証。**
+ノード列+設定 → HTML 文字列（＋ページ用 CSS）。**ブラウザは動かさず文字列を検証。** PDF 組版は Vivliostyle が担う。
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
-| PAPER-01 | paperSize=a4 | プリアンブルに `a4paper`（documentclass と geometry 両方） | latexRenderer.test.ts | ⬜ |
-| PAPER-02 | paperSize=a5 | `a5paper` | latexRenderer.test.ts | ⬜ |
-| PAPER-03 | paperSize=a6 | `a6paper` | latexRenderer.test.ts | ⬜ |
-| PAPER-04 | paperSize=b5 | `b5paper` | latexRenderer.test.ts | ⬜ |
-| MODE-01 | writingMode=vertical | 文書クラス `ltjtbook` | latexRenderer.test.ts | ⬜ |
-| MODE-02 | writingMode=horizontal | 文書クラス `ltjsbook` | latexRenderer.test.ts | ⬜ |
-| MODE-03 | vertical | 綴じ余白 `inner=10mm,outer=20mm` | latexRenderer.test.ts | ⬜ |
-| MODE-04 | horizontal | 綴じ余白 `inner=20mm,outer=10mm` | latexRenderer.test.ts | ⬜ |
-| REND-01 | 見出し level1 | `\clearpage` + 連番付き見出し | latexRenderer.test.ts | ⬜ |
-| REND-02 | 見出し level1（縦書き） | 章番号が漢数字（一,二…） | latexRenderer.test.ts | ⬜ |
-| REND-03 | 見出し level1（横書き） | 章番号がアラビア数字 | latexRenderer.test.ts | ⬜ |
-| REND-04 | 見出し level2 | `h1-h2`（縦は `・`、横は `-`）形式 | latexRenderer.test.ts | ⬜ |
-| REND-05 | 目次ノード | `\tableofcontents` 出力 | latexRenderer.test.ts | ⬜ |
-| REND-06 | 段落 | `\noindent\hspace{\parindent}…\par` | latexRenderer.test.ts | ⬜ |
-| REND-07 | 空行 | `\vspace{\baselineskip}` | latexRenderer.test.ts | ⬜ |
-| REND-08 | 改ページ | `\clearpage` | latexRenderer.test.ts | ⬜ |
-| REND-09 | リスト（ネスト） | `\begin{itemize}` の入れ子と `\item` | latexRenderer.test.ts | ⬜ |
-| REND-10 | インライン: ルビ | `\ruby{語}{読}` | latexRenderer.test.ts | ⬜ |
-| REND-11 | インライン: 圏点 | `\kenten{語}` | latexRenderer.test.ts | ⬜ |
-| REND-12 | インライン: ダッシュ level n | `——`（全角ダッシュ2連）を n 回 | latexRenderer.test.ts | ⬜ |
-| REND-13 | インライン: 三点リーダ level n | `…` を n 回 | latexRenderer.test.ts | ⬜ |
-| REND-14 | 縦中横（縦書き） | `\tatechuyoko{…}`、！→!・？→? 変換 | latexRenderer.test.ts | ⬜ |
-| REND-15 | 縦中横（横書き） | 変換せず素通し | latexRenderer.test.ts | ⬜ |
+| PAPER-01 | paperSize=a4 | `@page` の `size: 210mm 297mm` | htmlRenderer.test.ts | ⬜ |
+| PAPER-02 | paperSize=a5 | `size: 148mm 210mm` | htmlRenderer.test.ts | ⬜ |
+| PAPER-03 | paperSize=a6 | `size: 105mm 148mm` | htmlRenderer.test.ts | ✅ |
+| PAPER-04 | paperSize=b5 | `size: 182mm 257mm` | htmlRenderer.test.ts | ⬜ |
+| MODE-01 | writingMode=vertical | `writing-mode: vertical-rl` を含む | htmlRenderer.test.ts | ✅ |
+| MODE-02 | writingMode=horizontal | `vertical-rl` を含まない | htmlRenderer.test.ts | ✅ |
+| MODE-03 | vertical | 綴じ代 inner=10mm（recto `@page :left` の margin-right） | htmlRenderer.test.ts | ✅ |
+| MODE-04 | horizontal | 綴じ代 inner=20mm（recto `@page :right` の margin-left） | htmlRenderer.test.ts | ✅ |
+| REND-01 | 見出し level1 | `break-before:page` + 連番付き `<h1 class="atb-h1">` | htmlRenderer.test.ts | ✅ |
+| REND-02 | 見出し level1（縦書き） | 章番号が漢数字（一,二…） | htmlRenderer.test.ts | ✅ |
+| REND-03 | 見出し level1（横書き） | 章番号がアラビア数字 | htmlRenderer.test.ts | ✅ |
+| REND-04 | 見出し level2 | `h1-h2`（縦は `・`、横は `-`）形式 | htmlRenderer.test.ts | ✅ |
+| REND-05 | 目次ノード | `<nav class="atb-toc">` + 各見出しへの `<a href="#id">`（`leader()`+`target-counter` でノンブル） | htmlRenderer.test.ts | ✅ |
+| REND-06 | 段落 | `<p class="atb-p">`（`text-indent:1em` で一字下げ） | htmlRenderer.test.ts | ✅ |
+| REND-07 | 空行 | `<div class="atb-blank">`（1行アキ） | htmlRenderer.test.ts | ✅ |
+| REND-08 | 改ページ | `<div class="atb-pagebreak">`（`break-before:page`） | htmlRenderer.test.ts | ✅ |
+| REND-09 | リスト（ネスト） | `<ul class="atb-list">` の入れ子と `<li>` | htmlRenderer.test.ts | ✅ |
+| REND-10 | インライン: ルビ | `<ruby>語<rt>読</rt></ruby>` | htmlRenderer.test.ts | ✅ |
+| REND-11 | インライン: 圏点 | `<span class="atb-kenten">語</span>`（`text-emphasis` ゴマ点） | htmlRenderer.test.ts | ✅ |
+| REND-12 | インライン: ダッシュ level n | `——`（em ダッシュ2連）を n 回 | htmlRenderer.test.ts | ✅ |
+| REND-13 | インライン: 三点リーダ level n | `…` を n 回 | htmlRenderer.test.ts | ✅ |
+| REND-14 | 縦中横（縦書き） | `<span class="atb-tcy">`（`text-combine-upright`）、！→!・？→? 変換 | htmlRenderer.test.ts | ✅ |
+| REND-15 | 縦中横（横書き） | 変換せず素通し（span で包まない） | htmlRenderer.test.ts | ✅ |
+| REND-16 | HTML特殊文字 | `<` `>` `&` をエスケープ | htmlRenderer.test.ts | ✅ |
+| REND-17 | 最終ページのコロフォン | 末尾に `<div class="atb-colophon">`（`running()` で最終ページ脚注へ） | htmlRenderer.test.ts | ✅ |
 
 ## 4. 文字数カウント — `usecase/countChars.ts` `countChars`
 
@@ -153,7 +155,7 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | UC-03 | `convertAtbToPdf` の charCount | 入力本文の文字数を返す | convertAtbToPdf.test.ts | ⬜ |
 | UC-04 | `generateCoverTemplate` | fileWriter に SVG を書き、svgPath を返す | generateCoverTemplate.test.ts | ⬜ |
 
-## 12. E2E（lualatex が必要 / `it.skipIf` で保護）
+## 12. E2E（Vivliostyle のヘッドレスブラウザが必要 / `it.skipIf` で保護）
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|

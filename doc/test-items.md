@@ -37,8 +37,9 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 |----|------|----------|--------|------|
 | INLINE-01 | `＠漢字（かんじ）` | `ruby`（text=漢字, ruby=かんじ） | inlineParser.test.ts | ⬜ |
 | INLINE-02 | `＠強調（・）` | `kenten`（ruby が `・` の特例） | inlineParser.test.ts | ⬜ |
-| INLINE-03 | `ーー` | `dash` level 2 | inlineParser.test.ts | ⬜ |
-| INLINE-04 | `ーーー` | `dash` level 3（連続数=level） | inlineParser.test.ts | ⬜ |
+| INLINE-03 | `＠ー` | `dash` level 1（＠＋長音記号の数=level） | inlineParser.test.ts | ✅ |
+| INLINE-04 | `＠ーー` | `dash` level 2（連続数=level） | inlineParser.test.ts | ✅ |
+| INLINE-04b | `ーー`（＠なし） | `text`（ダッシュにならない） | inlineParser.test.ts | ✅ |
 | INLINE-05 | `・・` | `ellipsis` level 2 | inlineParser.test.ts | ⬜ |
 | INLINE-06 | `！！` / `？？` / `！？` / `？！` | `tatechuyoko`（`[！？]{2,}` は順不同で2個以上にマッチ） | inlineParser.test.ts | ⬜ |
 | INLINE-07 | マークアップ無しのテキスト | `text` 1ノード | inlineParser.test.ts | ⬜ |
@@ -69,7 +70,7 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | REND-09 | リスト（ネスト） | `\begin{itemize}` の入れ子と `\item` | latexRenderer.test.ts | ⬜ |
 | REND-10 | インライン: ルビ | `\ruby{語}{読}` | latexRenderer.test.ts | ⬜ |
 | REND-11 | インライン: 圏点 | `\kenten{語}` | latexRenderer.test.ts | ⬜ |
-| REND-12 | インライン: ダッシュ | `——`（全角ダッシュ2連） | latexRenderer.test.ts | ⬜ |
+| REND-12 | インライン: ダッシュ level n | `——`（全角ダッシュ2連）を n 回 | latexRenderer.test.ts | ⬜ |
 | REND-13 | インライン: 三点リーダ level n | `…` を n 回 | latexRenderer.test.ts | ⬜ |
 | REND-14 | 縦中横（縦書き） | `\tatechuyoko{…}`、！→!・？→? 変換 | latexRenderer.test.ts | ⬜ |
 | REND-15 | 縦中横（横書き） | 変換せず素通し | latexRenderer.test.ts | ⬜ |

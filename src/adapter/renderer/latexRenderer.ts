@@ -7,7 +7,7 @@ function renderInlineNode(node: InlineNode, isVertical: boolean): string {
         case 'text':        return node.text;
         case 'ruby':        return `\\ruby{${node.text}}{${node.ruby}}`;
         case 'kenten':      return `\\kenten{${node.text}}`;
-        case 'dash':        return '——';
+        case 'dash':        return '——'.repeat(node.level);
         case 'ellipsis':    return '…'.repeat(node.level);
         case 'tatechuyoko': return isVertical ? `\\tatechuyoko{${node.text.replace(/！/g, '!').replace(/？/g, '?')}}` : node.text;
     }

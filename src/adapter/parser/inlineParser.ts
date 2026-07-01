@@ -10,8 +10,8 @@ export type TateChuYokoNode = { kind: 'tatechuyoko'; text: string };
 
 export type InlineNode = TextNode | RubyNode | KentenNode | DashNode | EllipsisNode | TateChuYokoNode;
 
-// ＠text（ruby/・） または ーー以上 または ・・以上（中黒２個以上→三点リーダー） または ！？の組み合わせ（縦中横）
-const INLINE_RE = /＠([^（）\n]+)（([^）\n]*)）|ーー+|・・+|[！？]{2,}/g;
+// ＠text（ruby/・） または ＠ー以上（＠＋長音記号→ダッシュ／ー１個につき２連） または ・・以上（中黒２個以上→三点リーダー） または ！？の組み合わせ（縦中横）
+const INLINE_RE = /＠([^（）\n]+)（([^）\n]*)）|＠(ー+)|・・+|[！？]{2,}/g;
 
 export function parseInline(text: string): InlineNode[] {
     const nodes: InlineNode[] = [];
@@ -24,7 +24,9 @@ export function parseInline(text: string): InlineNode[] {
             nodes.push({ kind: 'text', text: text.slice(lastIndex, matchIndex) });
         }
 
-        if (match[0].startsWith('＠')) {
+        if (match[3] !== undefined) {
+            nodes.push({ kind: 'dash', keySymbol, text: 'ー', level: match[3].length });
+        } else if (match[0].startsWith('＠')) {
             const matchText  = match[1] ?? '';
             const matchRuby  = match[2] ?? '';
             if (matchRuby === '・') {
@@ -32,8 +34,6 @@ export function parseInline(text: string): InlineNode[] {
             } else {
                 nodes.push({ kind: 'ruby', keySymbol, text: matchText, ruby: matchRuby });
             }
-        } else if (match[0].startsWith('ー')) {
-            nodes.push({ kind: 'dash', keySymbol, text: 'ー', level: match[0].length });
         } else if (match[0].startsWith('・')) {
             nodes.push({ kind: 'ellipsis', keySymbol, text: '・', level: match[0].length });
         } else {

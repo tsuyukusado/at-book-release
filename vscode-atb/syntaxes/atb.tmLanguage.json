@@ -71,7 +71,7 @@
       }
     },
     "dash": {
-      "match": "ーー+",
+      "match": "＠ー+",
       "name": "constant.character.escape.dash.atb"
     },
     "ellipsis": {

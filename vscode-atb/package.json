@@ -2,7 +2,7 @@
   "name": "vscode-atb",
   "displayName": "at-book (.atb) 構文強調",
   "description": "at-book (.atb) ファイルの構文強調表示",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "tsuyukusa",
   "main": "./extension.js",
   "activationEvents": [

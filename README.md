@@ -150,31 +150,9 @@ sudo apt install nodejs npm
 node -v
 ```
 
-## 2. TeX Live のインストール
+> **TeX Live は不要になりました。** ＠本の組版エンジンは HTML/CSS ベースに刷新され、PDF 生成には [Vivliostyle](https://vivliostyle.org/) を利用します。LaTeX（LuaLaTeX / TeX Live）のインストールは必要ありません。
 
-PDF の組版には **LuaLaTeX**（TeX Live 2023 以上）が必要です。
-
-### macOS
-
-```sh
-brew install --cask mactex-no-gui
-```
-
-インストール後、ターミナルを再起動してください。
-
-### Windows
-
-[TeX Live のダウンロードページ](https://tug.org/texlive/windows.html) からインストーラーを入手してください。
-
-インストールには時間がかかることがありますが、完了するまでそのままお待ちください。
-
-### Linux (Ubuntu/Debian)
-
-```sh
-sudo apt install texlive-full
-```
-
-## 3. ＠本 のインストール
+## 2. ＠本 のインストール
 
 ```sh
 git clone https://github.com/tsuyukusado/at-book-release.git
@@ -182,11 +160,13 @@ cd at-book-release
 npm install
 ```
 
-`npm install` を実行すると、自動的にビルドと git フックのセットアップが行われます。
+`npm install` を実行すると、自動的にビルドと git フックのセットアップ、そして PDF 組版に必要な依存（Vivliostyle）の導入が行われます。
+
+なお、**初めて PDF を生成するとき**に、組版用のヘッドレスブラウザ（Chromium）が自動でダウンロードされます（数百 MB／初回のみ）。ネットワークに接続した状態で最初の生成を行ってください。
 
 これで、`.atb` ファイルをコミットするたびに PDF が自動生成される環境が整いました。
 
-## 4. VS Code 拡張のインストール（任意）
+## 3. VS Code 拡張のインストール（任意）
 
 `.atb` ファイルの構文強調表示を有効にします。VSCodeで執筆する場合はぜひ入れておいてください。
 

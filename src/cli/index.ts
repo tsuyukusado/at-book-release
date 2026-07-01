@@ -4,7 +4,7 @@ import { execSync } from "child_process";
 import { convertAtbToPdf } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
-import { nodeFileReader, nodeLuaLatexRunner, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs, appendCharCount, readCountState, writeCountState } from "../infrastructure";
+import { nodeFileReader, vivliostyleRunner, readPdfPageCount, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs, appendCharCount, readCountState, writeCountState } from "../infrastructure";
 import { countChars } from "../usecase/countChars";
 
 // git コマンドを実行。失敗時（gitリポジトリでない・対象が存在しない等）は undefined を返す。
@@ -155,14 +155,9 @@ async function runCountHistory(): Promise<void> {
 }
 
 async function readExistingPageCount(atbPath: string): Promise<number | undefined> {
-    try {
-        const base = path.basename(atbPath, '.atb');
-        const logPath = path.join('dist', 'at-book', `${base}-honbun.log`);
-        const log = await nodeFileReader.read(logPath);
-        const m = log.match(/Output written on .+?\((\d+) pages?,/);
-        if (m?.[1]) return parseInt(m[1], 10);
-    } catch {}
-    return undefined;
+    const base = path.basename(atbPath, '.atb');
+    const pdfPath = path.join('dist', 'at-book', `${base}-honbun.pdf`);
+    return readPdfPageCount(pdfPath);
 }
 
 async function runCountChars(atbPath: string, opts: { fromCommit?: boolean } = {}): Promise<void> {
@@ -223,7 +218,7 @@ async function runConvert(atbPath: string): Promise<void> {
         {
             converter:    atbConverter,
             fileReader:   nodeFileReader,
-            latexRunner:  nodeLuaLatexRunner,
+            pdfRunner:    vivliostyleRunner,
             configReader: nodeConfigReader,
         },
         { atbPath }

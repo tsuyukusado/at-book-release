@@ -25,6 +25,10 @@
     "url": "https://github.com/tsuyukusado/at-book/issues"
   },
   "homepage": "https://github.com/tsuyukusado/at-book#readme",
+  "dependencies": {
+    "@vivliostyle/cli": "^8.0.0",
+    "pdf-lib": "^1.17.1"
+  },
   "devDependencies": {
     "@types/node": "^25.9.1",
     "typescript": "^6.0.3",

@@ -10,8 +10,8 @@ export interface FileReader {
     read(filePath: string): Promise<string>;
 }
 
-export interface LatexRunner {
-    compile(texContent: string, outputPath: string): Promise<{ pageCount: number }>;
+export interface HtmlToPdfRunner {
+    compile(htmlContent: string, outputPath: string): Promise<{ pageCount: number }>;
 }
 
 export interface ConfigReader {
@@ -21,7 +21,7 @@ export interface ConfigReader {
 interface Deps {
     converter:    AtbConverter;
     fileReader:   FileReader;
-    latexRunner:  LatexRunner;
+    pdfRunner:    HtmlToPdfRunner;
     configReader: ConfigReader;
 }
 
@@ -36,12 +36,12 @@ export async function convertAtbToPdf(
         deps.fileReader.read(input.atbPath),
         deps.configReader.read(input.atbPath),
     ]);
-    const texContent = deps.converter.convert(atbText, config);
+    const htmlContent = deps.converter.convert(atbText, config);
 
     const base    = path.basename(input.atbPath, '.atb');
     const pdfPath = path.join('dist', 'at-book', `${base}-honbun.pdf`);
 
-    const { pageCount } = await deps.latexRunner.compile(texContent, pdfPath);
+    const { pageCount } = await deps.pdfRunner.compile(htmlContent, pdfPath);
     const charCount = countChars(atbText);
     return { pdfPath, pageCount, charCount, config };
 }

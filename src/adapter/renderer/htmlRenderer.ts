@@ -19,8 +19,12 @@ function renderInlineNode(node: InlineNode, isVertical: boolean): string {
         case 'ruby':
             return `<ruby>${escapeHtml(node.text)}<rt>${escapeHtml(node.ruby)}</rt></ruby>`;
         case 'kenten':
-            // 圏点（ゴマ点）。text-emphasis で再現する。
-            return `<span class="atb-kenten">${escapeHtml(node.text)}</span>`;
+            // 圏点（ゴマ点）。text-emphasis はマークが 0.5em 固定で小さくできず、
+            // ShipporiMincho の ﹅ グリフが太いと大きすぎる。ルビと同じ <ruby> 機構で
+            // 1 文字ずつ ﹅ を振り、rt の font-size でサイズを絞る（.atb-kenten の CSS 参照）。
+            return [...node.text]
+                .map(ch => `<ruby class="atb-kenten">${escapeHtml(ch)}<rt>${escapeHtml(node.ruby)}</rt></ruby>`)
+                .join('');
         case 'dash':
             // ＠ー → 1レベルにつき「――」（全角ダッシュ／ダーシ U+2015 の2連）。
             // 日本語組版の慣例に合わせ、欧文 em dash(U+2014) ではなく U+2015 を使う。
@@ -213,13 +217,11 @@ ruby > rt {
   font-size: 0.5em;
 }
 
-/* 圏点。text-emphasis は仕様どおり 0.5em で描画されるが、ゴマ点(filled sesame /
-   U+FE45)のグリフは ShipporiMincho では em の約 58% と極太で、0.5em でも本文文字の
-   3 割近くを占める黒い塊になり「デカすぎて一行に見える」。em の 27% と小ぶりな
-   filled dot(U+2022 •)に変え、ルビ大の控えめな圏点にする。 */
-.atb-kenten {
-  text-emphasis-style: filled dot;
-  -webkit-text-emphasis-style: filled dot;
+/* 圏点。ルビと同じ <ruby> 機構で 1 文字ずつ ﹅ を振る。ゴマ点グリフ(U+FE45)は
+   ShipporiMincho では em の約 58% と太いため、通常ルビ(0.5em)より小さい 0.22em に
+   絞って控えめな圏点にする。← 大きさはこの値で調整する。 */
+ruby.atb-kenten > rt {
+  font-size: 0.22em;
 }
 
 /* 縦中横 */

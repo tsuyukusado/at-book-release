@@ -21,6 +21,8 @@ function spawnAsync(cmd: string, args: string[], cwd: string, env: NodeJS.Proces
 const CHROME_FOR_TESTING = path.join(os.homedir(), '.local/chrome-for-testing/chrome-linux64/chrome');
 // その Chrome が依存する共有ライブラリ一式（Playwright 非対応環境向けに手動配置）。
 const CHROME_LIB_DIR = path.join(os.homedir(), '.local/chrome-libs/usr/lib/x86_64-linux-gnu');
+// 同梱フォント（@font-face 用 兼 fontconfig フォールバック用）の置き場。
+const BUNDLED_FONTS_DIR = path.resolve(__dirname, '../../fonts');
 
 // 組版に使うブラウザを解決する。
 //   1. AT_BOOK_CHROME（明示指定）が最優先。
@@ -43,14 +45,43 @@ function resolveBrowser(): string | undefined {
     return candidates.find(p => existsSync(p));
 }
 
+// 手動配置の Chrome for Testing を使う場合、この環境はフォントも fontconfig 設定も
+// 持たない。Chrome/Skia はフォント・フォールバック時に fontconfig を必ず引き、
+// 発見可能なフォントが 1 つも無いと SkFontMgr_FontConfigInterface の未実装パスに入って
+// SIGABRT で落ちる（「page ... has been closed」の正体）。同梱フォントを指す最小の
+// fontconfig 設定を生成し、FONTCONFIG_FILE で読ませてクラッシュを防ぐ。
+// フォントが揃った通常環境（システム Chrome 等）には触れない。
+async function writeFontconfig(destDir: string): Promise<string> {
+    const fcDir    = path.join(destDir, 'fontconfig');
+    const cacheDir = path.join(fcDir, 'cache');
+    const confPath = path.join(fcDir, 'fonts.conf');
+    await mkdir(cacheDir, { recursive: true });
+    const conf = `<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <dir>${BUNDLED_FONTS_DIR}</dir>
+  <dir>/usr/share/fonts</dir>
+  <dir>/usr/local/share/fonts</dir>
+  <dir prefix="xdg">fonts</dir>
+  <dir>~/.fonts</dir>
+  <cachedir>${cacheDir}</cachedir>
+  <cachedir prefix="xdg">fontconfig</cachedir>
+</fontconfig>
+`;
+    await writeFile(confPath, conf, 'utf-8');
+    return confPath;
+}
+
 // 手動配置の Chrome for Testing を使う場合のみ、依存ライブラリの場所を
-// LD_LIBRARY_PATH に前置きした環境を返す（それ以外は現在の環境をそのまま使う）。
-function browserEnv(browser: string | undefined): NodeJS.ProcessEnv {
+// LD_LIBRARY_PATH に前置きし、生成した fontconfig 設定を FONTCONFIG_FILE で渡した
+// 環境を返す（それ以外は現在の環境をそのまま使う）。
+function browserEnv(browser: string | undefined, fontconfigFile: string | undefined): NodeJS.ProcessEnv {
     const env = { ...process.env };
     if (browser === CHROME_FOR_TESTING && existsSync(CHROME_LIB_DIR)) {
         env.LD_LIBRARY_PATH = env.LD_LIBRARY_PATH
             ? `${CHROME_LIB_DIR}:${env.LD_LIBRARY_PATH}`
             : CHROME_LIB_DIR;
+        if (fontconfigFile) env.FONTCONFIG_FILE = fontconfigFile;
     }
     return env;
 }
@@ -68,11 +99,10 @@ export async function readPdfPageCount(pdfPath: string): Promise<number | undefi
 
 // @font-face が参照する fonts/ を HTML と同じ場所へ配置する。
 async function copyFonts(destDir: string): Promise<void> {
-    const srcDir = path.resolve(__dirname, '../../fonts');
     const fontsDir = path.join(destDir, 'fonts');
     await mkdir(fontsDir, { recursive: true });
     for (const name of ['ShipporiMincho-Regular.ttf', 'ShipporiMincho-Bold.ttf']) {
-        await copyFile(path.join(srcDir, name), path.join(fontsDir, name));
+        await copyFile(path.join(BUNDLED_FONTS_DIR, name), path.join(fontsDir, name));
     }
 }
 
@@ -99,6 +129,7 @@ export const vivliostyleRunner: HtmlToPdfRunner = {
 
         await mkdir(absDir, { recursive: true });
         await copyFonts(absDir);
+        const fontconfigFile = await writeFontconfig(absDir);
         await writeFile(absHtmlPath, htmlContent, 'utf-8');
 
         const bin = resolveVivliostyleBin();
@@ -116,7 +147,7 @@ export const vivliostyleRunner: HtmlToPdfRunner = {
             ...(browser ? ['--executable-browser', browser] : []),
         ];
 
-        await spawnAsync(cmd, args, absDir, browserEnv(browser));
+        await spawnAsync(cmd, args, absDir, browserEnv(browser, fontconfigFile));
 
         const pageCount = (await readPdfPageCount(absPdfPath)) ?? 0;
         return { pageCount };

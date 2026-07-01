@@ -195,7 +195,7 @@ nav.atb-toc a.atb-toc-h2 {
   margin-inline-start: 1em;
 }
 nav.atb-toc a::after {
-  content: leader('—') target-counter(attr(href url), page);
+  content: leader('—') '\\2003' target-counter(attr(href url), page);
 }
 
 /* 箇条書き */

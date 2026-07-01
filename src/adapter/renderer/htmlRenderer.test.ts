@@ -19,8 +19,10 @@ describe('インライン記法', () => {
         expect(html('＠漢字（かんじ）', horizontal)).toContain('<ruby>漢字<rt>かんじ</rt></ruby>');
     });
 
-    it('圏点（＠文字（・））は text-emphasis 用の span になる', () => {
-        expect(html('＠強調（・）', horizontal)).toContain('<span class="atb-kenten">強調</span>');
+    it('圏点（＠文字（・））は 1 文字ずつ ﹅ を振る ruby になる', () => {
+        expect(html('＠強調（・）', horizontal)).toContain(
+            '<ruby class="atb-kenten">強<rt>﹅</rt></ruby><ruby class="atb-kenten">調<rt>﹅</rt></ruby>',
+        );
     });
 
     it('ダッシュ（＠ー）は全角ダッシュ(U+2015)2連、＠ーー は4連になる', () => {

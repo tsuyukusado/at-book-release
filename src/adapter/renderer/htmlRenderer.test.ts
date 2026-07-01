@@ -137,11 +137,13 @@ describe('ページ設定 CSS', () => {
         expect(html('文', horizontal)).toContain('size: 105mm 148mm;');
     });
 
-    it('綴じ代マージンが縦横で反転する（横 inner=20 / 縦 inner=10）', () => {
-        // 横書き recto(:right) は綴じが左 → margin-left:20mm
+    it('綴じ代マージンは縦横とも綴じ側=20mm・小口側=10mm', () => {
+        // 横書き(左綴じ) recto(:right) は綴じが左 → margin-left:20mm / 小口右:10mm
         expect(html('文', horizontal)).toContain('margin-left: 20mm;');
-        // 縦書き recto(:right) は綴じが右 → margin-right:10mm
-        expect(html('文', vertical)).toContain('margin-right: 10mm;');
+        expect(html('文', horizontal)).toContain('margin-right: 10mm;');
+        // 縦書き(右綴じ) recto(:left) は綴じが右 → margin-right:20mm / 小口左:10mm
+        expect(html('文', vertical)).toContain('margin-right: 20mm;');
+        expect(html('文', vertical)).toContain('margin-left: 10mm;');
     });
 
     it('最終ページ用コロフォンが末尾に置かれる', () => {

@@ -15,6 +15,27 @@ describe('インライン記法', () => {
         expect(html('ふつうの文章です', horizontal)).toContain('<p class="atb-p">ふつうの文章です</p>');
     });
 
+    it('行頭が「の段落は字下げしない（atb-p-noindent が付く）', () => {
+        expect(html('「おはよう」と彼は言った', horizontal))
+            .toContain('<p class="atb-p atb-p-noindent">');
+    });
+
+    it('行頭が『の段落も字下げしない', () => {
+        expect(html('『本の題名』を読む', horizontal))
+            .toContain('<p class="atb-p atb-p-noindent">');
+    });
+
+    it('括弧以外で始まる段落は通常の字下げ（<p> に atb-p-noindent は付かない）', () => {
+        expect(html('ふつうの文章です', horizontal))
+            .toContain('<p class="atb-p">ふつうの文章です</p>');
+    });
+
+    it('字下げしないクラス用の text-indent: 0 が CSS に含まれる', () => {
+        const out = html('「行頭括弧', horizontal);
+        expect(out).toContain('p.atb-p-noindent');
+        expect(out).toContain('text-indent: 0;');
+    });
+
     it('ルビ（＠漢字（かんじ））は <ruby> になる', () => {
         expect(html('＠漢字（かんじ）', horizontal)).toContain('<ruby>漢字<rt>かんじ</rt></ruby>');
     });

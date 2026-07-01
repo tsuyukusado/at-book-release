@@ -28,4 +28,15 @@ describe('ダッシュ記法（＠ー）', () => {
             expect.objectContaining({ kind: 'ruby', text: '夜明け', ruby: 'よあけ' }),
         ]);
     });
+
+    it('同じ行に ＠ー と ＠圏点 が混在しても、間のテキストを巻き込まない', () => {
+        // ＠始まり（・）のルビ判定が先頭の ＠ー まで遡って飲み込まないこと
+        const nodes = parseInline('＠ーここが、＠始まり（・）だったのだ。');
+        expect(nodes).toEqual([
+            expect.objectContaining({ kind: 'dash', level: 1 }),
+            { kind: 'text', text: 'ここが、' },
+            expect.objectContaining({ kind: 'kenten', text: '始まり' }),
+            { kind: 'text', text: 'だったのだ。' },
+        ]);
+    });
 });

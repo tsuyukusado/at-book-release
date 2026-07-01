@@ -11,7 +11,7 @@ export type TateChuYokoNode = { kind: 'tatechuyoko'; text: string };
 export type InlineNode = TextNode | RubyNode | KentenNode | DashNode | EllipsisNode | TateChuYokoNode;
 
 // ＠text（ruby/・） または ＠ー以上（＠＋長音記号→ダッシュ／ー１個につき２連） または ・・以上（中黒２個以上→三点リーダー） または ！？の組み合わせ（縦中横）
-const INLINE_RE = /＠([^（）\n]+)（([^）\n]*)）|＠(ー+)|・・+|[！？]{2,}/g;
+const INLINE_RE = /＠([^＠（）\n]+)（([^）\n]*)）|＠(ー+)|・・+|[！？]{2,}/g;
 
 export function parseInline(text: string): InlineNode[] {
     const nodes: InlineNode[] = [];

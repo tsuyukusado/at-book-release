@@ -29,7 +29,7 @@
       "patterns": [{ "include": "#inline" }]
     },
     "heading1": {
-      "begin": "^(＠)(?!＠)(?![^（）\\n]+（)",
+      "begin": "^(＠)(?!＠)(?!ー)(?![^＠（）\\n]+（)",
       "end": "$",
       "beginCaptures": {
         "1": { "name": "markup.heading.1.atb" }
@@ -55,7 +55,7 @@
       ]
     },
     "kenten": {
-      "match": "(＠)([^（）\\n]+)(（・）)",
+      "match": "(＠)([^＠（）\\n]+)(（・）)",
       "captures": {
         "1": { "name": "punctuation.definition.annotation.atb" },
         "2": { "name": "markup.bold.kenten.atb" },
@@ -63,7 +63,7 @@
       }
     },
     "ruby": {
-      "match": "(＠)([^（）\\n]+)(（[^）\\n]*）)",
+      "match": "(＠)([^＠（）\\n]+)(（[^）\\n]*）)",
       "captures": {
         "1": { "name": "punctuation.definition.annotation.atb" },
         "2": { "name": "entity.name.ruby.base.atb" },

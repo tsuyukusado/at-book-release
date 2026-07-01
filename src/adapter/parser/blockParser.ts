@@ -25,7 +25,7 @@ export function parseLine(line: string): ParsedNode {
         return { kind: 'toc', keySymbol, text: '目次' };
     }
 
-    if (line.startsWith('＠') && !/^＠[^（）\n]+（/.test(line)) {
+    if (line.startsWith('＠') && !line.startsWith('＠ー') && !/^＠[^＠（）\n]+（/.test(line)) {
         return { kind: 'heading', keySymbol, level: 1, text: line.slice(1) };
     }
 

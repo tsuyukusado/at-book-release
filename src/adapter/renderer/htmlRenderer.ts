@@ -213,10 +213,13 @@ ruby > rt {
   font-size: 0.5em;
 }
 
-/* 圏点（ゴマ点） */
+/* 圏点。text-emphasis は仕様どおり 0.5em で描画されるが、ゴマ点(filled sesame /
+   U+FE45)のグリフは ShipporiMincho では em の約 58% と極太で、0.5em でも本文文字の
+   3 割近くを占める黒い塊になり「デカすぎて一行に見える」。em の 27% と小ぶりな
+   filled dot(U+2022 •)に変え、ルビ大の控えめな圏点にする。 */
 .atb-kenten {
-  text-emphasis-style: filled sesame;
-  -webkit-text-emphasis-style: filled sesame;
+  text-emphasis-style: filled dot;
+  -webkit-text-emphasis-style: filled dot;
 }
 
 /* 縦中横 */

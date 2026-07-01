@@ -149,6 +149,11 @@ p.atb-p {
   text-indent: 1em;
 }
 
+/* 行頭が始め括弧（「『）の段落は字下げしない（天付き） */
+p.atb-p-noindent {
+  text-indent: 0;
+}
+
 /* 空行: 1行分のアキ (本文の line-height 1.75 に合わせる) */
 .atb-blank {
   block-size: 1.75em;
@@ -326,9 +331,13 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                 body.push(`<nav class="atb-toc"><div class="atb-toc-title">目次</div>\n${entries}\n</nav>`);
                 break;
             }
-            case 'paragraph':
-                body.push(`<p class="atb-p">${renderInline(node.text, isVertical)}</p>`);
+            case 'paragraph': {
+                // 行頭が始め括弧（「『）の段落は字下げ（天付き）にしない。
+                const noIndent = /^[「『]/.test(node.text);
+                const cls = noIndent ? 'atb-p atb-p-noindent' : 'atb-p';
+                body.push(`<p class="${cls}">${renderInline(node.text, isVertical)}</p>`);
                 break;
+            }
             case 'blank':
                 body.push('<div class="atb-blank"></div>');
                 break;

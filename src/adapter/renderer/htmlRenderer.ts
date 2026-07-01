@@ -149,9 +149,9 @@ p.atb-p {
   text-indent: 1em;
 }
 
-/* 空行: 1行分のアキ */
+/* 空行: 1行分のアキ (本文の line-height 1.75 に合わせる) */
 .atb-blank {
-  block-size: 1em;
+  block-size: 1.75em;
 }
 
 /* 改ページ */

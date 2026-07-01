@@ -78,9 +78,11 @@ function buildCss(config: PaperConfig): string {
     const isVertical = config.writingMode === 'vertical';
     const { widthMm, heightMm } = PAPER_DIMENSIONS_MM[config.paperSize];
 
-    // 綴じ代（inner=綴じ側 / outer=小口側）。LaTeX geometry と同値。
-    const inner = isVertical ? 10 : 20;
-    const outer = isVertical ? 20 : 10;
+    // 綴じ代（inner=綴じ側 / outer=小口側）。綴じ側を広く取るのは縦横で共通
+    // （綴じは物理的な製本側の余白なので、向きに依存させない）。左右への割り当ては
+    // 下の recto/verso ロジックが担当する。
+    const inner = 20;
+    const outer = 10;
 
     // 見開きの表裏（recto=表/奇数, verso=裏/偶数）と CSS の :left/:right の対応。
     // 横書き(LTR)は先頭ページが :right、縦書き(vertical-rl)は先頭ページが :left。

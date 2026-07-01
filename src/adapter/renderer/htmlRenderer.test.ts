@@ -23,9 +23,9 @@ describe('インライン記法', () => {
         expect(html('＠強調（・）', horizontal)).toContain('<span class="atb-kenten">強調</span>');
     });
 
-    it('ダッシュ（＠ー）は em ダッシュ2連、＠ーー は4連になる', () => {
-        expect(html('闇＠ー', horizontal)).toContain('闇——');
-        expect(html('＠ーー', horizontal)).toContain('————');
+    it('ダッシュ（＠ー）は全角ダッシュ(U+2015)2連、＠ーー は4連になる', () => {
+        expect(html('闇＠ー', horizontal)).toContain('闇――');
+        expect(html('＠ーー', horizontal)).toContain('――――');
     });
 
     it('三点リーダー（・・）は …… になる', () => {

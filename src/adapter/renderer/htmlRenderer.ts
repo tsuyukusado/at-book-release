@@ -22,8 +22,9 @@ function renderInlineNode(node: InlineNode, isVertical: boolean): string {
             // 圏点（ゴマ点）。text-emphasis で再現する。
             return `<span class="atb-kenten">${escapeHtml(node.text)}</span>`;
         case 'dash':
-            // ＠ー → 1レベルにつき「——」（emダッシュ2連）
-            return escapeHtml('——'.repeat(node.level));
+            // ＠ー → 1レベルにつき「――」（全角ダッシュ／ダーシ U+2015 の2連）。
+            // 日本語組版の慣例に合わせ、欧文 em dash(U+2014) ではなく U+2015 を使う。
+            return escapeHtml('――'.repeat(node.level));
         case 'ellipsis':
             // ・・ → 三点リーダー。level は元の中黒の数。
             return escapeHtml('…'.repeat(node.level));

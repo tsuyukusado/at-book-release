@@ -151,4 +151,21 @@ describe('ページ設定 CSS', () => {
         expect(out).toContain('class="atb-colophon"');
         expect(out).toContain('Created with at-book.');
     });
+
+    it('コロフォンの font-size は版面幅に合わせて 6pt 以下に収まる', () => {
+        // 小さい紙（A6）では 6pt では横にはみ出すため縮む。
+        const a6 = html('文', { paperSize: 'a6', writingMode: 'vertical' });
+        const m6 = a6.match(/@bottom-center\s*\{[^}]*font-size:\s*([\d.]+)pt/);
+        expect(m6).not.toBeNull();
+        const a6pt = parseFloat(m6![1]);
+        expect(a6pt).toBeLessThan(6);
+        expect(a6pt).toBeGreaterThan(0);
+    });
+
+    it('大きい紙（A4）ではコロフォンは設計値 6pt のまま', () => {
+        const a4 = html('文', { paperSize: 'a4', writingMode: 'horizontal' });
+        const m4 = a4.match(/@bottom-center\s*\{[^}]*font-size:\s*([\d.]+)pt/);
+        expect(m4).not.toBeNull();
+        expect(parseFloat(m4![1])).toBe(6);
+    });
 });

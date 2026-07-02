@@ -74,6 +74,20 @@ function nombreBox(corner: '@bottom-left' | '@bottom-right'): string {
   }`;
 }
 
+// コロフォンの font-size(pt) を版面幅に合わせて決める。
+// 欧文プロポーショナル書体の平均字幅を約 0.55em と見積もり、版面幅（本文が入る
+// 横幅）に COLOPHON の全文字が収まる font-size を逆算する。安全側に 0.95 を掛け、
+// 設計値 6pt を上限とする（大きい紙では 6pt のまま、小さい紙でのみ縮む）。
+function fitColophonFontPt(contentWidthMm: number): number {
+    const AVG_GLYPH_EM = 0.55;
+    const SAFETY = 0.95;
+    const MAX_PT = 6;
+    const contentWidthPt = (contentWidthMm / 25.4) * 72;
+    const fitPt = (contentWidthPt * SAFETY) / (COLOPHON.length * AVG_GLYPH_EM);
+    // 小数第2位までに丸める（CSS 出力を安定させ、スナップショットを扱いやすくする）。
+    return Math.round(Math.min(MAX_PT, fitPt) * 100) / 100;
+}
+
 function buildCss(config: PaperConfig): string {
     const isVertical = config.writingMode === 'vertical';
     const { widthMm, heightMm } = PAPER_DIMENSIONS_MM[config.paperSize];
@@ -98,6 +112,11 @@ function buildCss(config: PaperConfig): string {
         ? { left: inner, right: outer, nombre: '@bottom-right' as const }
         : { left: outer, right: inner, nombre: '@bottom-left'  as const };
 
+    // コロフォン（MIT 表記など）は横組み 1 行の欧文。紙が小さいと設計値 6pt では
+    // 版面幅（＝紙幅−左右マージン）を超えて右端が切れてしまう。そこで版面幅に
+    // 収まる font-size を概算し、6pt を上限として動的に縮める。
+    const colophonFontPt = fitColophonFontPt(widthMm - inner - outer);
+
     return `
 @page {
   size: ${widthMm}mm ${heightMm}mm;
@@ -108,7 +127,7 @@ function buildCss(config: PaperConfig): string {
     content: element(atb-colophon);
     writing-mode: horizontal-tb;
     text-align: center;
-    font-size: 6pt;
+    font-size: ${colophonFontPt}pt;
   }
 }
 @page ${rectoSel} {

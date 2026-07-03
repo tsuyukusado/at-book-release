@@ -67,32 +67,63 @@ describe('インライン記法', () => {
 });
 
 describe('見出しと番号', () => {
-    it('横書きの大見出しはアラビア数字＋半角スペース', () => {
-        const out = html('＠序章', horizontal);
+    it('大見出しが複数あるとき、横書きはアラビア数字＋半角スペースで番号を振る', () => {
+        const out = html('＠序章\n＠第二章', horizontal);
         expect(out).toContain('<h1 class="atb-h1" id="atb-h1">1 序章</h1>');
+        expect(out).toContain('>2 第二章</h1>');
     });
 
-    it('縦書きの大見出しは漢数字＋全角スペース', () => {
-        const out = html('＠序章', vertical);
+    it('大見出しが複数あるとき、縦書きは漢数字＋全角スペースで番号を振る', () => {
+        const out = html('＠序章\n＠第二章', vertical);
         expect(out).toContain('一　序章');
+        expect(out).toContain('二　第二章');
     });
 
-    it('横書きの小見出しは「大-小」番号', () => {
-        const out = html('＠序章\n＠＠導入', horizontal);
+    it('大見出しが複数あるとき、横書きの小見出しは「大-小」番号', () => {
+        const out = html('＠序章\n＠＠導入\n＠第二章', horizontal);
         expect(out).toContain('<h2 class="atb-h2" id="atb-h2">1-1 導入</h2>');
     });
 
-    it('縦書きの小見出しは「大・小」漢数字番号', () => {
-        const out = html('＠序章\n＠＠導入', vertical);
+    it('大見出しが複数あるとき、縦書きの小見出しは「大・小」漢数字番号', () => {
+        const out = html('＠序章\n＠＠導入\n＠第二章', vertical);
         expect(out).toContain('一・一　導入');
     });
 
-    it('大見出しごとに番号が進み、小見出しは章内でリセットされる', () => {
+    it('大見出しが複数あれば、小見出しが親配下に1つだけでも「大-小」番号を振る', () => {
         const out = html('＠一章\n＠＠節A\n＠二章\n＠＠節B', horizontal);
         expect(out).toContain('>1 一章</h1>');
         expect(out).toContain('>1-1 節A</h2>');
         expect(out).toContain('>2 二章</h1>');
         expect(out).toContain('>2-1 節B</h2>');
+    });
+
+    it('大見出しが1つだけなら番号を振らない（横書き）', () => {
+        const out = html('＠序章', horizontal);
+        expect(out).toContain('<h1 class="atb-h1" id="atb-h1">序章</h1>');
+    });
+
+    it('大見出しが1つだけなら番号を振らない（縦書き）', () => {
+        const out = html('＠序章', vertical);
+        expect(out).toContain('id="atb-h1">序章</h1>');
+    });
+
+    it('大見出しが1つ・小見出しも1つなら、どちらも番号を振らない', () => {
+        const out = html('＠序章\n＠＠導入', horizontal);
+        expect(out).toContain('<h1 class="atb-h1" id="atb-h1">序章</h1>');
+        expect(out).toContain('<h2 class="atb-h2" id="atb-h2">導入</h2>');
+    });
+
+    it('大見出しが1つ・小見出しが複数なら、小見出しだけ単純連番を振る（横書き）', () => {
+        const out = html('＠序章\n＠＠導入\n＠＠展開', horizontal);
+        expect(out).toContain('<h1 class="atb-h1" id="atb-h1">序章</h1>');
+        expect(out).toContain('<h2 class="atb-h2" id="atb-h2">1 導入</h2>');
+        expect(out).toContain('<h2 class="atb-h2" id="atb-h3">2 展開</h2>');
+    });
+
+    it('大見出しが1つ・小見出しが複数なら、小見出しだけ単純連番を振る（縦書き）', () => {
+        const out = html('＠序章\n＠＠導入\n＠＠展開', vertical);
+        expect(out).toContain('id="atb-h2">一　導入</h2>');
+        expect(out).toContain('id="atb-h3">二　展開</h2>');
     });
 });
 

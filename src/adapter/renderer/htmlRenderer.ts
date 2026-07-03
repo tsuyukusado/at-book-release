@@ -291,6 +291,30 @@ const COLOPHON = 'Created with at-book. Copyright © 2026 tsuyukusado. MIT Licen
 export function render(nodes: ParsedNode[], config: PaperConfig): string {
     const isVertical = config.writingMode === 'vertical';
 
+    // 事前スキャン: 番号の要否を決めるために、大見出しの総数と、各小見出しが
+    // 属する兄弟グループ（直前の大見出し配下）のサイズを求める。
+    //   - 大見出しが唯一 → 大見出しは番号なし。小見出しは同じ親配下に複数あるときだけ
+    //     単純連番（親番号を持たないので「1」「2」…）、唯一なら番号なし。
+    //   - 大見出しが複数 → 大見出しは連番。小見出しは数に関係なく「親-子」の階層番号。
+    let h1Total = 0;
+    const h2GroupSize = new Map<number, number>();
+    let group: number[] = [];
+    const flushGroup = () => {
+        for (const idx of group) h2GroupSize.set(idx, group.length);
+        group = [];
+    };
+    nodes.forEach((node, i) => {
+        if (node.kind !== 'heading') return;
+        if (node.level === 1) {
+            flushGroup();
+            h1Total++;
+        } else {
+            group.push(i);
+        }
+    });
+    flushGroup();
+    const multipleH1 = h1Total >= 2;
+
     // 第1パス: 見出しに id と番号付きタイトルを割り当て、目次項目を収集する。
     const headingMeta = new Map<number, HeadingMeta>();
     const tocEntries: HeadingMeta[] = [];
@@ -304,19 +328,33 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
         if (node.level === 1) {
             h1++;
             h2 = 0;
-            const num = isVertical ? toKanjiNumber(h1) : `${h1}`;
-            const sep = isVertical ? '　' : ' ';
-            const titleHtml = `${escapeHtml(num)}${escapeHtml(sep)}${renderInline(node.text, isVertical)}`;
+            const inline = renderInline(node.text, isVertical);
+            // 大見出しが唯一のときは番号を振らない。
+            let titleHtml = inline;
+            if (multipleH1) {
+                const num = isVertical ? toKanjiNumber(h1) : `${h1}`;
+                const sep = isVertical ? '　' : ' ';
+                titleHtml = `${escapeHtml(num)}${escapeHtml(sep)}${inline}`;
+            }
             const meta: HeadingMeta = { id, level: 1, titleHtml };
             headingMeta.set(i, meta);
             tocEntries.push(meta);
         } else {
             h2++;
-            const n1 = isVertical ? toKanjiNumber(h1) : `${h1}`;
-            const n2 = isVertical ? toKanjiNumber(h2) : `${h2}`;
-            const sep = isVertical ? '・' : '-';
+            const inline = renderInline(node.text, isVertical);
             const tsep = isVertical ? '　' : ' ';
-            const titleHtml = `${escapeHtml(n1)}${escapeHtml(sep)}${escapeHtml(n2)}${escapeHtml(tsep)}${renderInline(node.text, isVertical)}`;
+            let titleHtml = inline;
+            if (multipleH1) {
+                // 親-子 の階層番号（子が唯一でも問答無用で振る）。
+                const n1 = isVertical ? toKanjiNumber(h1) : `${h1}`;
+                const n2 = isVertical ? toKanjiNumber(h2) : `${h2}`;
+                const sep = isVertical ? '・' : '-';
+                titleHtml = `${escapeHtml(n1)}${escapeHtml(sep)}${escapeHtml(n2)}${escapeHtml(tsep)}${inline}`;
+            } else if ((h2GroupSize.get(i) ?? 0) >= 2) {
+                // 親が唯一で子が複数 → 親番号を持てないので単純連番。
+                const n2 = isVertical ? toKanjiNumber(h2) : `${h2}`;
+                titleHtml = `${escapeHtml(n2)}${escapeHtml(tsep)}${inline}`;
+            }
             const meta: HeadingMeta = { id, level: 2, titleHtml };
             headingMeta.set(i, meta);
             tocEntries.push(meta);

@@ -21,7 +21,7 @@ describe('インライン記法', () => {
 
     it('圏点（＠文字（・））は 1 文字ずつ ﹅ を振る ruby になる', () => {
         expect(html('＠強調（・）', horizontal)).toContain(
-            '<ruby class="atb-kenten">強<rt>﹅</rt></ruby><ruby class="atb-kenten">調<rt>﹅</rt></ruby>',
+            '<ruby class="atb-kenten">強<rt><span>﹅</span></rt></ruby><ruby class="atb-kenten">調<rt><span>﹅</span></rt></ruby>',
         );
     });
 

@@ -10,10 +10,12 @@ export type TateChuYokoNode = { kind: 'tatechuyoko'; text: string };
 
 export type InlineNode = TextNode | RubyNode | KentenNode | DashNode | EllipsisNode | TateChuYokoNode;
 
-// ＠ー以上（＠＋長音記号→ダッシュ／ー１個につき２連） または ＠text（ruby/・） または ・・以上（中黒２個以上→三点リーダー） または ！？の組み合わせ（縦中横）
+// ＠ー以上（＠＋長音記号→ダッシュ／ー１個につき２連） または ＠text（ruby/・） または ・・以上（中黒２個以上→三点リーダー） または ！？の組み合わせ（縦中横） または 半角数字１〜２桁（縦中横）
 // ダッシュ（＠ー）をルビより先に判定する。そうしないと、同じ行の後方に全角括弧（…）やルビがあると、
 // ルビ候補の貪欲な基底 [^＠（）\n]+ が ＠ー の ＠ を横取りし、ダッシュごと巻き込んでしまう。
-const INLINE_RE = /＠(ー+)|＠([^＠（）\n]+)（([^）\n]*)）|・・+|[！？]{2,}/g;
+// 半角数字は 1〜2 桁のみ縦中横にする。前後を数字以外で挟む境界（前後読み）で、3 桁以上の連なりは
+// どの位置からも一致させない（「12」→縦中横、「123」→そのまま）。
+const INLINE_RE = /＠(ー+)|＠([^＠（）\n]+)（([^）\n]*)）|・・+|[！？]{2,}|(?<![0-9])[0-9]{1,2}(?![0-9])/g;
 
 export function parseInline(text: string): InlineNode[] {
     const nodes: InlineNode[] = [];

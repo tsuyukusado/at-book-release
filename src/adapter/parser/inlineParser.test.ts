@@ -145,6 +145,11 @@ describe('！／？のあとに文章が続く場合の全角スペース', () =
         expect(nodes).toEqual([{ kind: 'text', text: '「本当！」と彼は言った' }]);
     });
 
+    it('開き括弧・開き引用符の直前にはスペースを入れない', () => {
+        const nodes = parseInline('本当！「そうだ」');
+        expect(nodes).toEqual([{ kind: 'text', text: '本当！「そうだ」' }]);
+    });
+
     it('句読点の直前にはスペースを入れない', () => {
         const nodes = parseInline('えっ！。');
         expect(nodes).toEqual([{ kind: 'text', text: 'えっ！。' }]);

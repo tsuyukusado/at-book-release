@@ -64,6 +64,11 @@ describe('インライン記法', () => {
     it('HTML特殊文字はエスケープされる', () => {
         expect(html('a < b & c', horizontal)).toContain('a &lt; b &amp; c');
     });
+
+    it('！のあとに文章が続く段落は全角スペースが入り、行末の！には入らない', () => {
+        expect(html('本当！そうだ', horizontal)).toContain('<p class="atb-p">本当！　そうだ</p>');
+        expect(html('やった！', horizontal)).toContain('<p class="atb-p">やった！</p>');
+    });
 });
 
 describe('見出しと番号', () => {

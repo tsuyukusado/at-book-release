@@ -17,9 +17,23 @@ export type InlineNode = TextNode | RubyNode | KentenNode | DashNode | EllipsisN
 // どの位置からも一致させない（「12」→縦中横、「123」→そのまま）。
 const INLINE_RE = /＠(ー+)|＠([^＠（）\n]+)（([^）\n]*)）|・・+|[！？]{2,}|(?<![0-9])[0-9]{1,2}(?![0-9])/g;
 
+// ！／？（全角）の連なりの直後に「文章が続く」場合、全角スペースを挟む。
+// 「続かない」＝行末・閉じ括弧・閉じ引用符・句読点等が続く場合はスペースを入れない。
+// これは INLINE_RE より前に生の行文字列へ適用する。こうすると単独の ！／？ も、
+// 縦中横になる ！？ の連続も、挿入した　が後続テキストに含まれる形で一貫して処理できる。
+// 直後に来たらスペースを入れない文字（行末 $ は別途 (?!...|$) で除外）:
+//   ！？…‥・。、，．　と各種閉じ括弧・閉じ引用符（全角／半角）、空白。
+const EXCLAIM_RE = /([！？]+)(?![！？…‥・。、，．　」』）】》〉｝〕｣”’\s)\]}."'])(?!$)/g;
+
+function insertSpaceAfterExclaim(text: string): string {
+    return text.replace(EXCLAIM_RE, '$1　');
+}
+
 export function parseInline(text: string): InlineNode[] {
     const nodes: InlineNode[] = [];
     let lastIndex = 0;
+
+    text = insertSpaceAfterExclaim(text);
 
     for (const match of text.matchAll(INLINE_RE)) {
         const matchIndex = match.index ?? 0;

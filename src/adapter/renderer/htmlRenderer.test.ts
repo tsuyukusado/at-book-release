@@ -106,6 +106,21 @@ describe('目次', () => {
         expect(out).toContain('id="atb-h1"');
         expect(out).toContain('id="atb-h2"');
     });
+
+    it('各エントリはリンクのみで余計な span を持たない（番号は a::after で出す）', () => {
+        const out = html('＠目次\n＠第一章', horizontal);
+        expect(out).toContain('<a class="atb-toc-h1" href="#atb-h1">');
+        expect(out).not.toContain('atb-toc-page');
+    });
+
+    it('ページ番号は a::after でリーダー線と target-counter を同じ生成内容に入れ、縦中横で正立させる', () => {
+        // leader() と target-counter を同じ生成ボックスに入れないと番号がリーダー末尾に
+        // アンカーされず別行へ回り込む。text-combine-upright はリーダーには効かず数字だけ正立。
+        const out = html('＠目次\n＠第一章', vertical);
+        expect(out).toContain('nav.atb-toc a::after');
+        expect(out).toContain("content: leader('—') target-counter(attr(href url), page)");
+        expect(out).toContain('text-combine-upright: all');
+    });
 });
 
 describe('ブロック要素', () => {

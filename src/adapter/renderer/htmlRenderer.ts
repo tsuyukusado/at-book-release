@@ -224,8 +224,14 @@ nav.atb-toc a {
 nav.atb-toc a.atb-toc-h2 {
   margin-inline-start: 1em;
 }
+/* 目次の行末: リーダー線＋ページ番号。leader() と target-counter は同じ生成
+   ボックスに入れないと番号がリーダー末尾にアンカーされず別行へ回り込む。
+   text-combine-upright はリーダー（グルー）には効かず、数字だけを縦中横で正立
+   させる（横書きでは無効果）。 */
 nav.atb-toc a::after {
-  content: leader('—') '\\2003' target-counter(attr(href url), page);
+  content: leader('—') target-counter(attr(href url), page);
+  text-combine-upright: all;
+  -webkit-text-combine-upright: all;
 }
 
 /* 箇条書き */
@@ -348,6 +354,9 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
                 break;
             }
             case 'toc': {
+                // ページ番号はリーダー線とともに a::after で出す（target-counter は
+                // 自要素 a の href を読む）。縦書きでは text-combine-upright で数字だけ
+                // 正立させる。leader と番号を同じ生成内容に入れないと番号が別行へ回り込む。
                 const entries = tocEntries
                     .map(e => `<a class="atb-toc-${e.level === 1 ? 'h1' : 'h2'}" href="#${e.id}">${e.titleHtml}</a>`)
                     .join('\n');

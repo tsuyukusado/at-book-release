@@ -68,3 +68,58 @@ describe('ダッシュ記法（＠ー）', () => {
         ]);
     });
 });
+
+describe('半角数字の縦中横', () => {
+    it('半角1桁は縦中横になる', () => {
+        const nodes = parseInline('第7章');
+        expect(nodes).toEqual([
+            { kind: 'text', text: '第' },
+            { kind: 'tatechuyoko', text: '7' },
+            { kind: 'text', text: '章' },
+        ]);
+    });
+
+    it('半角2桁は縦中横になる', () => {
+        const nodes = parseInline('午後10時');
+        expect(nodes).toEqual([
+            { kind: 'text', text: '午後' },
+            { kind: 'tatechuyoko', text: '10' },
+            { kind: 'text', text: '時' },
+        ]);
+    });
+
+    it('半角3桁以上は縦中横にせず、そのままテキストのまま', () => {
+        const nodes = parseInline('全123ページ');
+        expect(nodes).toEqual([{ kind: 'text', text: '全123ページ' }]);
+    });
+
+    it('数字の間に非数字を挟めば、それぞれ1〜2桁ずつ縦中横になる', () => {
+        const nodes = parseInline('12月8日');
+        expect(nodes).toEqual([
+            { kind: 'tatechuyoko', text: '12' },
+            { kind: 'text', text: '月' },
+            { kind: 'tatechuyoko', text: '8' },
+            { kind: 'text', text: '日' },
+        ]);
+    });
+
+    it('全角数字は対象外（縦中横にしない）', () => {
+        const nodes = parseInline('第１０章');
+        expect(nodes).toEqual([{ kind: 'text', text: '第１０章' }]);
+    });
+
+    it('半角英字は対象外（数字だけが縦中横）', () => {
+        const nodes = parseInline('AI時代');
+        expect(nodes).toEqual([{ kind: 'text', text: 'AI時代' }]);
+    });
+
+    it('既存の ！？ 縦中横と共存できる', () => {
+        const nodes = parseInline('まさか10連勝！？');
+        expect(nodes).toEqual([
+            { kind: 'text', text: 'まさか' },
+            { kind: 'tatechuyoko', text: '10' },
+            { kind: 'text', text: '連勝' },
+            { kind: 'tatechuyoko', text: '！？' },
+        ]);
+    });
+});

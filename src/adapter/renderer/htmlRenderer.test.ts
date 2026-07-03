@@ -203,10 +203,12 @@ describe('ページ設定 CSS', () => {
         expect(out).toContain('Created with at-book.');
     });
 
+    // font-size は実行要素側（.atb-colophon）に指定する。@bottom-center の font-size は
+    // content:element() で流し込む実行要素には効かないため。
     it('コロフォンの font-size は版面幅に合わせて 6pt 以下に収まる', () => {
         // 小さい紙（A6）では 6pt では横にはみ出すため縮む。
         const a6 = html('文', { paperSize: 'a6', writingMode: 'vertical' });
-        const m6 = a6.match(/@bottom-center\s*\{[^}]*font-size:\s*([\d.]+)pt/);
+        const m6 = a6.match(/\.atb-colophon\s*\{[^}]*font-size:\s*([\d.]+)pt/);
         expect(m6).not.toBeNull();
         const a6pt = parseFloat(m6![1]);
         expect(a6pt).toBeLessThan(6);
@@ -215,8 +217,22 @@ describe('ページ設定 CSS', () => {
 
     it('大きい紙（A4）ではコロフォンは設計値 6pt のまま', () => {
         const a4 = html('文', { paperSize: 'a4', writingMode: 'horizontal' });
-        const m4 = a4.match(/@bottom-center\s*\{[^}]*font-size:\s*([\d.]+)pt/);
+        const m4 = a4.match(/\.atb-colophon\s*\{[^}]*font-size:\s*([\d.]+)pt/);
         expect(m4).not.toBeNull();
         expect(parseFloat(m4![1])).toBe(6);
+    });
+
+    it('コロフォンは 1 行に保たれる（white-space:nowrap で左右が切れない）', () => {
+        const a6 = html('文', { paperSize: 'a6', writingMode: 'vertical' });
+        expect(a6).toMatch(/\.atb-colophon\s*\{[^}]*white-space:\s*nowrap/);
+    });
+
+    it('ノンブルは小口側の隅ボックス（本文の外）に置かれる', () => {
+        // 縦書き(右綴じ): recto(:left) は小口=左 → @bottom-left-corner
+        const v = html('文', vertical);
+        expect(v).toMatch(/@bottom-left-corner\s*\{[^}]*content:\s*counter\(page\)/);
+        // 横書き(左綴じ): recto(:right) は小口=右 → @bottom-right-corner
+        const h = html('文', horizontal);
+        expect(h).toMatch(/@bottom-right-corner\s*\{[^}]*content:\s*counter\(page\)/);
     });
 });

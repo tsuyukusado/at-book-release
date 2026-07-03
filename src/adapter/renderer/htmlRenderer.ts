@@ -61,26 +61,29 @@ function toKanjiNumber(n: number): string {
 // ---- CSS -------------------------------------------------------------------
 
 // ノンブル（ページ番号）を配置する余白ボックス。
-// 物理的な下端・小口側に置く。縦書きでもアラビア数字を横組み（縦中横相当）で出す。
-function nombreBox(corner: '@bottom-left' | '@bottom-right'): string {
-    const align = corner === '@bottom-right' ? 'right' : 'left';
-    const pad = corner === '@bottom-right' ? 'padding-right: 3mm;' : 'padding-left: 3mm;';
+// 物理的な下端・小口側の *隅ボックス*（corner）に置く。隅ボックスの横幅は小口側マージン
+// （outer=10mm）ぶんなので、ノンブルは版面（本文）の外側・小口余白に収まり、本文には
+// 食い込まない。縦書きでもアラビア数字を横組み（縦中横相当）で出す。
+function nombreBox(corner: '@bottom-left-corner' | '@bottom-right-corner'): string {
     return `${corner} {
     content: counter(page);
     writing-mode: horizontal-tb;
-    text-align: ${align};
-    ${pad}
+    text-align: center;
     font-size: 8pt;
   }`;
 }
 
 // コロフォンの font-size(pt) を版面幅に合わせて決める。
-// 欧文プロポーショナル書体の平均字幅を約 0.55em と見積もり、版面幅（本文が入る
-// 横幅）に COLOPHON の全文字が収まる font-size を逆算する。安全側に 0.95 を掛け、
+// 欧文プロポーショナル書体の平均字幅を約 0.6em と見積もり、版面幅（本文が入る
+// 横幅）に COLOPHON の全文字が収まる font-size を逆算する。安全側に 0.9 を掛け、
 // 設計値 6pt を上限とする（大きい紙では 6pt のまま、小さい紙でのみ縮む）。
+//
+// 字幅係数を 0.55→0.6・安全率を 0.95→0.9 に引き上げているのは、実際に使う明朝系
+// 書体の欧文グリフが 0.55em より横に広く、A6 では旧値の見積もりだと右端が見切れて
+// いたため。見積もりを保守側に振り、小さい紙で確実に収まる余裕を確保する。
 function fitColophonFontPt(contentWidthMm: number): number {
-    const AVG_GLYPH_EM = 0.55;
-    const SAFETY = 0.95;
+    const AVG_GLYPH_EM = 0.6;
+    const SAFETY = 0.9;
     const MAX_PT = 6;
     const contentWidthPt = (contentWidthMm / 25.4) * 72;
     const fitPt = (contentWidthPt * SAFETY) / (COLOPHON.length * AVG_GLYPH_EM);
@@ -104,17 +107,20 @@ function buildCss(config: PaperConfig): string {
     const versoSel = isVertical ? ':right' : ':left';
 
     // recto の物理配置。横書きは小口=右、縦書きは小口=左（LaTeX の RO/LE・LO/RE と一致）。
-    // ノンブルは小口側の下端に置く。verso はその左右反転。
+    // ノンブルは小口側の下端「隅」に置く（本文の外側・小口余白）。verso はその左右反転。
     const recto = isVertical
-        ? { left: outer, right: inner, nombre: '@bottom-left'  as const }
-        : { left: inner, right: outer, nombre: '@bottom-right' as const };
+        ? { left: outer, right: inner, nombre: '@bottom-left-corner'  as const }
+        : { left: inner, right: outer, nombre: '@bottom-right-corner' as const };
     const verso = isVertical
-        ? { left: inner, right: outer, nombre: '@bottom-right' as const }
-        : { left: outer, right: inner, nombre: '@bottom-left'  as const };
+        ? { left: inner, right: outer, nombre: '@bottom-right-corner' as const }
+        : { left: outer, right: inner, nombre: '@bottom-left-corner'  as const };
 
-    // コロフォン（MIT 表記など）は横組み 1 行の欧文。紙が小さいと設計値 6pt では
-    // 版面幅（＝紙幅−左右マージン）を超えて右端が切れてしまう。そこで版面幅に
-    // 収まる font-size を概算し、6pt を上限として動的に縮める。
+    // コロフォン（MIT 表記など）は横組み 1 行の欧文。@bottom-center は版面幅（＝紙幅
+    // −左右マージン）ぶんの横箱で、その中央にコロフォンを流す。紙が小さいと設計値 6pt
+    // では版面幅を超えて左右が切れるため、版面幅に収まる font-size を概算して縮める。
+    // ※ font-size は実行要素側（.atb-colophon）に指定する。余白ボックス（@bottom-center）
+    //   の font-size は content:element() で流し込む実行要素には効かず、要素は定義元の
+    //   本文サイズ（9pt）を引き継いでしまうため。ここを取り違えると縮小が無視される。
     const colophonFontPt = fitColophonFontPt(widthMm - inner - outer);
 
     return `
@@ -125,9 +131,7 @@ function buildCss(config: PaperConfig): string {
   /* 最終ページのみに出るコロフォン（実行組版で最後に流れてくる要素を参照） */
   @bottom-center {
     content: element(atb-colophon);
-    writing-mode: horizontal-tb;
     text-align: center;
-    font-size: ${colophonFontPt}pt;
   }
 }
 @page ${rectoSel} {
@@ -270,10 +274,14 @@ ruby.atb-kenten > rt > span {
 }
 
 /* コロフォン: 流れからは外し、最終ページのフッター中央にのみ出す。
-   縦書きでも横組みで出すため writing-mode を明示する（element() で引くと元の縦組みを保持するため）。 */
+   縦書きでも横組みで出すため writing-mode を明示する（element() で引くと元の縦組みを保持するため）。
+   font-size は版面幅に収める縮小値をここ（実行要素側）に指定する（@bottom-center 側は効かない）。
+   white-space:nowrap で 1 行に保ち、版面幅に収まる font-size なので左右が切れない。 */
 .atb-colophon {
   position: running(atb-colophon);
   writing-mode: horizontal-tb;
+  white-space: nowrap;
+  font-size: ${colophonFontPt}pt;
 }
 `.trim();
 }

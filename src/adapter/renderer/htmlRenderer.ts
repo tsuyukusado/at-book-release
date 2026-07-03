@@ -23,7 +23,7 @@ function renderInlineNode(node: InlineNode, isVertical: boolean): string {
             // ShipporiMincho の ﹅ グリフが太いと大きすぎる。ルビと同じ <ruby> 機構で
             // 1 文字ずつ ﹅ を振り、rt の font-size でサイズを絞る（.atb-kenten の CSS 参照）。
             return [...node.text]
-                .map(ch => `<ruby class="atb-kenten">${escapeHtml(ch)}<rt>${escapeHtml(node.ruby)}</rt></ruby>`)
+                .map(ch => `<ruby class="atb-kenten">${escapeHtml(ch)}<rt><span>${escapeHtml(node.ruby)}</span></rt></ruby>`)
                 .join('');
         case 'dash':
             // ＠ー → 1レベルにつき「――」（全角ダッシュ／ダーシ U+2015 の2連）。
@@ -254,6 +254,13 @@ ruby > rt {
    絞って控えめな圏点にする。← 大きさはこの値で調整する。 */
 ruby.atb-kenten > rt {
   font-size: 0.22em;
+}
+/* ﹅ を inline-block の span に入れて拡大する。rt(ruby-text)自体は transform 非対応
+   なので効かない。span を scale すればレイアウト寸法(0.22em)は据え置きのまま＝字送りの
+   幅を変えずに、圏点の見た目だけ大きくできる。← 大きさはこの scale 値で調整する。 */
+ruby.atb-kenten > rt > span {
+  display: inline-block;
+  transform: scale(2.3);
 }
 
 /* 縦中横 */

@@ -123,3 +123,61 @@ describe('半角数字の縦中横', () => {
         ]);
     });
 });
+
+describe('！／？のあとに文章が続く場合の全角スペース', () => {
+    it('単独の ！ のあとに文章が続けば全角スペースを入れる', () => {
+        const nodes = parseInline('本当！そうだ');
+        expect(nodes).toEqual([{ kind: 'text', text: '本当！　そうだ' }]);
+    });
+
+    it('単独の ？ のあとに文章が続けば全角スペースを入れる', () => {
+        const nodes = parseInline('なぜ？答えは簡単だ');
+        expect(nodes).toEqual([{ kind: 'text', text: 'なぜ？　答えは簡単だ' }]);
+    });
+
+    it('行末（段落の終わり）の ！ にはスペースを入れない', () => {
+        const nodes = parseInline('やった！');
+        expect(nodes).toEqual([{ kind: 'text', text: 'やった！' }]);
+    });
+
+    it('閉じ括弧・閉じ引用符の直前にはスペースを入れない', () => {
+        const nodes = parseInline('「本当！」と彼は言った');
+        expect(nodes).toEqual([{ kind: 'text', text: '「本当！」と彼は言った' }]);
+    });
+
+    it('句読点の直前にはスペースを入れない', () => {
+        const nodes = parseInline('えっ！。');
+        expect(nodes).toEqual([{ kind: 'text', text: 'えっ！。' }]);
+    });
+
+    it('すでに全角スペースがある場合は二重にしない', () => {
+        const nodes = parseInline('本当！　そうだ');
+        expect(nodes).toEqual([{ kind: 'text', text: '本当！　そうだ' }]);
+    });
+
+    it('！？ の連続（縦中横）のあとに文章が続けば、縦中横ノードの後ろに全角スペースを付ける', () => {
+        const nodes = parseInline('まさか！？そうか');
+        expect(nodes).toEqual([
+            { kind: 'text', text: 'まさか' },
+            { kind: 'tatechuyoko', text: '！？' },
+            { kind: 'text', text: '　そうか' },
+        ]);
+    });
+
+    it('行末の ！？（縦中横）にはスペースを入れない', () => {
+        const nodes = parseInline('まさか！？');
+        expect(nodes).toEqual([
+            { kind: 'text', text: 'まさか' },
+            { kind: 'tatechuyoko', text: '！？' },
+        ]);
+    });
+
+    it('！ のあとに縦中横の半角数字が続く場合もスペースを入れる', () => {
+        const nodes = parseInline('やった！10連勝');
+        expect(nodes).toEqual([
+            { kind: 'text', text: 'やった！　' },
+            { kind: 'tatechuyoko', text: '10' },
+            { kind: 'text', text: '連勝' },
+        ]);
+    });
+});

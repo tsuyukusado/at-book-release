@@ -8,7 +8,10 @@ function makeDeps(config: PaperConfig) {
     const calls: { pdf: string[]; epub: string[] } = { pdf: [], epub: [] };
     const converter: AtbConverter = {
         convert: () => '<html>組んだHTML</html>',
-        convertEpubSections: () => ['<html>spine1</html>', '<html>spine2</html>'],
+        convertEpubSections: () => [
+            { fileName: 'part-001.html', html: '<html>spine1</html>' },
+            { fileName: 'part-002.html', html: '<html>spine2</html>' },
+        ],
     };
     const fileReader: FileReader = { read: async () => 'あいうえお' };
     const configReader: ConfigReader = { read: async () => config };
@@ -61,7 +64,7 @@ describe('convertAtb のフォーマット振り分け', () => {
         const deps = {
             converter: {
                 convert: (_t: string, _c: unknown, f?: 'pdf' | 'epub') => { convertFormats.push(f); return '<html></html>'; },
-                convertEpubSections: () => { epubSectionsCalls++; return ['<html>a</html>', '<html>b</html>']; },
+                convertEpubSections: () => { epubSectionsCalls++; return [{ fileName: 'part-001.html', html: '<html>a</html>' }]; },
             },
             fileReader: { read: async () => 'x' },
             configReader: { read: async () => ({ ...base, formats: ['pdf', 'epub'] as const }) },
@@ -82,7 +85,7 @@ describe('convertAtb のフォーマット振り分け', () => {
             ...deps,
             converter: {
                 convert: () => { convertCount++; return '<html></html>'; },
-                convertEpubSections: () => { convertCount++; return ['<html></html>']; },
+                convertEpubSections: () => { convertCount++; return [{ fileName: 'part-001.html', html: '<html></html>' }]; },
             },
         };
         const out = await convertAtb(spied, { atbPath: 'doc/test.atb' });

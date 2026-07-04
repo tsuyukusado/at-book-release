@@ -1,7 +1,8 @@
 {
   "paperSize": "a6",
   "writingMode": "horizontal",
-  "autoGenerate": [
-    "test.atb"
-  ]
+  "autoGenerate": ["test.atb"],
+  "bodyPaperThicknessMm": 0.09,
+  "coverPaperThicknessMm": 0.35,
+  "formats": ["pdf", "epub","web"]
 }

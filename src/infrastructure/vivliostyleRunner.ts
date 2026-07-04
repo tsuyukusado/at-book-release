@@ -117,39 +117,50 @@ function resolveVivliostyleBin(): string {
     return 'vivliostyle';
 }
 
+// HTML を Vivliostyle で組んで指定フォーマットの成果物を書き出す共通処理。
+// フォント同梱・fontconfig・ブラウザ解決は pdf/epub で共通なのでここに集約する。
+// format はサイドカーの拡張子（'pdf' | 'epub'）で、'epub' のときのみ `-f epub` を渡す
+// （pdf は拡張子から自動推論されるので明示不要）。
+async function runBuild(htmlContent: string, outputPath: string, format: 'pdf' | 'epub'): Promise<void> {
+    const dir      = path.dirname(outputPath);
+    const base     = path.basename(outputPath, `.${format}`);
+    const htmlPath = path.join(dir, `${base}.html`);
+
+    const absDir      = path.resolve(dir);
+    const absHtmlPath = path.resolve(htmlPath);
+    const absOutPath  = path.resolve(outputPath);
+
+    await mkdir(absDir, { recursive: true });
+    await copyFonts(absDir);
+    const fontconfigFile = await writeFontconfig(absDir);
+    await writeFile(absHtmlPath, htmlContent, 'utf-8');
+
+    const bin = resolveVivliostyleBin();
+    const isJs = bin.endsWith('.js') || bin.endsWith('.cjs') || bin.endsWith('.mjs');
+    const cmd  = isJs ? process.execPath : bin;
+    // 使用ブラウザを解決する。AT_BOOK_CHROME 明示指定 → ローカルの Chrome 自動検出 →
+    // 見つからなければ Vivliostyle 同梱 Chromium。環境変数を毎回 export しなくても動くようにする。
+    const browser = resolveBrowser();
+    const args = [
+        ...(isJs ? [bin] : []),
+        'build',
+        absHtmlPath,
+        '-o', absOutPath,
+        ...(format === 'epub' ? ['-f', 'epub'] : []),
+        '--timeout', '300',
+        ...(browser ? ['--executable-browser', browser] : []),
+    ];
+
+    await spawnAsync(cmd, args, absDir, browserEnv(browser, fontconfigFile));
+}
+
 export const vivliostyleRunner: HtmlToPdfRunner = {
     async compile(htmlContent: string, outputPath: string): Promise<{ pageCount: number }> {
-        const dir      = path.dirname(outputPath);
-        const base     = path.basename(outputPath, '.pdf');
-        const htmlPath = path.join(dir, `${base}.html`);
-
-        const absDir      = path.resolve(dir);
-        const absHtmlPath = path.resolve(htmlPath);
-        const absPdfPath  = path.resolve(outputPath);
-
-        await mkdir(absDir, { recursive: true });
-        await copyFonts(absDir);
-        const fontconfigFile = await writeFontconfig(absDir);
-        await writeFile(absHtmlPath, htmlContent, 'utf-8');
-
-        const bin = resolveVivliostyleBin();
-        const isJs = bin.endsWith('.js') || bin.endsWith('.cjs') || bin.endsWith('.mjs');
-        const cmd  = isJs ? process.execPath : bin;
-        // 使用ブラウザを解決する。AT_BOOK_CHROME 明示指定 → ローカルの Chrome 自動検出 →
-        // 見つからなければ Vivliostyle 同梱 Chromium。環境変数を毎回 export しなくても動くようにする。
-        const browser = resolveBrowser();
-        const args = [
-            ...(isJs ? [bin] : []),
-            'build',
-            absHtmlPath,
-            '-o', absPdfPath,
-            '--timeout', '300',
-            ...(browser ? ['--executable-browser', browser] : []),
-        ];
-
-        await spawnAsync(cmd, args, absDir, browserEnv(browser, fontconfigFile));
-
-        const pageCount = (await readPdfPageCount(absPdfPath)) ?? 0;
+        await runBuild(htmlContent, outputPath, 'pdf');
+        const pageCount = (await readPdfPageCount(path.resolve(outputPath))) ?? 0;
         return { pageCount };
+    },
+    async compileEpub(htmlContent: string, outputPath: string): Promise<void> {
+        await runBuild(htmlContent, outputPath, 'epub');
     }
 };

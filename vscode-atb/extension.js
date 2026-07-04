@@ -1,7 +1,7 @@
 const vscode = require('vscode');
 
 const HEADING2 = /^＠＠(?!＠)/;
-const HEADING1 = /^＠(?!＠)(?![^（）\n]+（)/;
+const HEADING1 = /^＠(?!＠)(?!ー)(?![^＠（）\n]+（)/;
 
 function activate(context) {
   context.subscriptions.push(

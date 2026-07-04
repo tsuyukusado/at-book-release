@@ -157,21 +157,67 @@ export function exportWeb(text: string): WebExport {
     const folderName =
         [...sanitizeName(titleSource)].slice(0, 5).join('').replace(/[.\s]+$/, '') || '無題';
 
-    // 名前をサニタイズし、同一ディレクトリ内での重複は連番で回避する。
+    // 章フォルダ・話ファイルの名前に連番を付ける（例: 01_タイトル）。
+    //   章番号 … フォルダの出現順に作品を通して採番。
+    //   話番号 … 章ごとに 01 からリセット。
+    //   ゼロ埋めの桁数は件数に応じて自動（最低2桁）。
+    // グループキー: 章フォルダ名（生）。'' はトップ直下（章なし）のファイル群。
+    const groupKey = (f: RawFile): string => (f.dir.length > 0 ? f.dir[0]! : '');
+
+    // 章（実フォルダ）の出現順に章番号を割り当てる。
+    const chapterNo = new Map<string, number>();
+    for (const f of raw) {
+        const key = groupKey(f);
+        if (key !== '' && !chapterNo.has(key)) chapterNo.set(key, chapterNo.size + 1);
+    }
+    const chapterWidth = numberWidth(chapterNo.size);
+
+    // 各グループの総ファイル数（話番号のゼロ埋め桁数に使う）。
+    const groupTotal = new Map<string, number>();
+    for (const f of raw) {
+        const key = groupKey(f);
+        groupTotal.set(key, (groupTotal.get(key) ?? 0) + 1);
+    }
+
     const files: WebFile[] = [];
+    const episodeSeq = new Map<string, number>(); // グループごとの話番号カウンタ
     const usedPerDir = new Map<string, Set<string>>();
     for (const f of raw) {
-        const dir = f.dir.map(d => sanitizeName(d) || '無題');
+        const key = groupKey(f);
+
+        // 章フォルダ名（番号付き）。章なし（トップ直下）はフォルダを作らない。
+        let dir: string[] = [];
+        if (key !== '') {
+            const num = pad(chapterNo.get(key)!, chapterWidth);
+            dir = [`${num}_${sanitizeName(key) || '無題'}`];
+        }
+
+        // 話番号（章ごとにリセット）。
+        const epWidth = numberWidth(groupTotal.get(key) ?? 1);
+        const epNo = (episodeSeq.get(key) ?? 0) + 1;
+        episodeSeq.set(key, epNo);
+        const base = `${pad(epNo, epWidth)}_${sanitizeName(f.name) || '無題'}`;
+
+        // 万一の同名衝突は連番で回避する（番号付けで通常は起きない安全網）。
         const dirKey = dir.join('/');
-        const base = sanitizeName(f.name) || '無題';
         const set = usedPerDir.get(dirKey) ?? new Set<string>();
         let unique = base;
         let i = 2;
         while (set.has(unique)) unique = `${base}-${i++}`;
         set.add(unique);
         usedPerDir.set(dirKey, set);
+
         files.push({ dir, name: unique, content: f.content });
     }
 
     return { folderName, files };
+}
+
+// 件数に応じたゼロ埋め桁数（最低2桁）。例: 9件→2, 12件→2, 100件→3。
+function numberWidth(count: number): number {
+    return Math.max(2, String(Math.max(count, 1)).length);
+}
+
+function pad(n: number, width: number): string {
+    return String(n).padStart(width, '0');
 }

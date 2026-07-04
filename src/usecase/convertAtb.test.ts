@@ -6,12 +6,15 @@ import type { PaperConfig } from '../domain';
 // 呼び出し記録つきのスタブ群。vivliostyle を実際に起動せずフォーマット振り分けを検証する。
 function makeDeps(config: PaperConfig) {
     const calls: { pdf: string[]; epub: string[] } = { pdf: [], epub: [] };
-    const converter: AtbConverter = { convert: () => '<html>組んだHTML</html>' };
+    const converter: AtbConverter = {
+        convert: () => '<html>組んだHTML</html>',
+        convertEpubSections: () => ['<html>spine1</html>', '<html>spine2</html>'],
+    };
     const fileReader: FileReader = { read: async () => 'あいうえお' };
     const configReader: ConfigReader = { read: async () => config };
     const pdfRunner: HtmlToPdfRunner = {
         async compile(_html, out) { calls.pdf.push(out); return { pageCount: 42 }; },
-        async compileEpub(_html, out) { calls.epub.push(out); },
+        async compileEpub(_sections, out) { calls.epub.push(out); },
     };
     return { deps: { converter, fileReader, pdfRunner, configReader }, calls };
 }
@@ -50,11 +53,16 @@ describe('convertAtb のフォーマット振り分け', () => {
         expect(out.pageCount).toBe(42);
     });
 
-    it('HTML はフォーマットごとに組み、それぞれ対応する format 引数を渡す', async () => {
-        // 圏点の拡大手法など pdf/epub で CSS が異なるため、共有せずフォーマット別に変換する。
-        const formatsSeen: (string | undefined)[] = [];
+    it('pdf は convert(format=pdf)、epub は convertEpubSections で別々に組む', async () => {
+        // 圏点の拡大手法など pdf/epub で CSS が異なり、さらに epub は spine 分割のため
+        // 複数文書を返す。両者を別メソッドとして分けて呼び分けていることを検証する。
+        const convertFormats: (string | undefined)[] = [];
+        let epubSectionsCalls = 0;
         const deps = {
-            converter: { convert: (_t: string, _c: unknown, f?: 'pdf' | 'epub') => { formatsSeen.push(f); return '<html></html>'; } },
+            converter: {
+                convert: (_t: string, _c: unknown, f?: 'pdf' | 'epub') => { convertFormats.push(f); return '<html></html>'; },
+                convertEpubSections: () => { epubSectionsCalls++; return ['<html>a</html>', '<html>b</html>']; },
+            },
             fileReader: { read: async () => 'x' },
             configReader: { read: async () => ({ ...base, formats: ['pdf', 'epub'] as const }) },
             pdfRunner: {
@@ -63,7 +71,8 @@ describe('convertAtb のフォーマット振り分け', () => {
             },
         };
         await convertAtb(deps, { atbPath: 'doc/test.atb' });
-        expect(formatsSeen).toEqual(['pdf', 'epub']);
+        expect(convertFormats).toEqual(['pdf']);
+        expect(epubSectionsCalls).toBe(1);
     });
 
     it('formats:["web"] なら HTML を組まず pdf/epub も生成しない（web は CLI 側で出力）', async () => {
@@ -71,7 +80,10 @@ describe('convertAtb のフォーマット振り分け', () => {
         const { deps, calls } = makeDeps({ ...base, formats: ['web'] });
         const spied = {
             ...deps,
-            converter: { convert: () => { convertCount++; return '<html></html>'; } },
+            converter: {
+                convert: () => { convertCount++; return '<html></html>'; },
+                convertEpubSections: () => { convertCount++; return ['<html></html>']; },
+            },
         };
         const out = await convertAtb(spied, { atbPath: 'doc/test.atb' });
         expect(convertCount).toBe(0);

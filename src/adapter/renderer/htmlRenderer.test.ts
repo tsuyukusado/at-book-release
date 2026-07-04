@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render } from './htmlRenderer';
+import { render, renderSections } from './htmlRenderer';
 import { parse } from '../parser';
 import type { PaperConfig } from '../../domain';
 
@@ -8,6 +8,16 @@ const vertical:   PaperConfig = { paperSize: 'a6', writingMode: 'vertical' };
 
 function html(src: string, config: PaperConfig): string {
     return render(parse(src), config);
+}
+
+function sections(src: string, config: PaperConfig = horizontal): string[] {
+    return renderSections(parse(src), config);
+}
+
+// <body> の中身だけ取り出す。CSS のコメントやセレクタ名（例: 「最後」の「後」や
+// .atb-pagebreak）に本文判定が引っかからないようにするため。
+function bodyOf(doc: string): string {
+    return doc.split('<body>')[1]!.split('</body>')[0]!;
 }
 
 describe('インライン記法', () => {
@@ -250,5 +260,59 @@ describe('ページ設定 CSS', () => {
         // 横書き(左綴じ): recto(:right) は小口=右 → @bottom-right-corner
         const h = html('文', horizontal);
         expect(h).toMatch(/@bottom-right-corner\s*\{[^}]*content:\s*counter\(page\)/);
+    });
+});
+
+describe('EPUB の spine 分割（renderSections）', () => {
+    it('改ページが無ければ 1 つの spine 文書になる', () => {
+        const s = sections('ひとつめ\nふたつめ');
+        expect(s).toHaveLength(1);
+        expect(bodyOf(s[0]!)).toContain('ひとつめ');
+        expect(bodyOf(s[0]!)).toContain('ふたつめ');
+    });
+
+    it('各セクションは完全な HTML 文書になる', () => {
+        const s = sections('前\n＠＠＠\n後');
+        for (const doc of s) {
+            expect(doc.startsWith('<!DOCTYPE html>')).toBe(true);
+            expect(doc).toContain('<title>at-book</title>');
+            expect(doc.trimEnd().endsWith('</html>')).toBe(true);
+        }
+    });
+
+    it('＠＠＠ で spine が分割され、改ページ用の div は残さない', () => {
+        const s = sections('前\n＠＠＠\n後');
+        expect(s).toHaveLength(2);
+        expect(bodyOf(s[0]!)).toContain('前');
+        expect(bodyOf(s[0]!)).not.toContain('後');
+        expect(bodyOf(s[1]!)).toContain('後');
+        // リフローでは効かない atb-pagebreak の空 div は EPUB では出さない（分割で表現）。
+        expect(bodyOf(s[0]!)).not.toContain('atb-pagebreak');
+        expect(bodyOf(s[1]!)).not.toContain('atb-pagebreak');
+    });
+
+    it('大見出し（＠）は新しい spine から始まる', () => {
+        const s = sections('本文0\n＠あたらしい章\n本文2');
+        expect(s).toHaveLength(2);
+        expect(bodyOf(s[0]!)).toContain('本文0');
+        expect(bodyOf(s[0]!)).not.toContain('あたらしい章');
+        expect(bodyOf(s[1]!)).toContain('あたらしい章');
+        expect(bodyOf(s[1]!)).toContain('本文2');
+    });
+
+    it('目次（＠目次）は前後で分割され、単独の spine 文書になる', () => {
+        const s = sections('前文\n＠目次\n後文');
+        expect(s).toHaveLength(3);
+        expect(bodyOf(s[0]!)).toContain('前文');
+        expect(bodyOf(s[1]!)).toContain('atb-toc-title');
+        expect(bodyOf(s[1]!)).not.toContain('前文');
+        expect(bodyOf(s[1]!)).not.toContain('後文');
+        expect(bodyOf(s[2]!)).toContain('後文');
+    });
+
+    it('コロフォンは最後の spine 文書にだけ入る', () => {
+        const s = sections('前\n＠＠＠\n後');
+        expect(bodyOf(s[0]!)).not.toContain('atb-colophon');
+        expect(bodyOf(s[s.length - 1]!)).toContain('atb-colophon');
     });
 });

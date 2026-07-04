@@ -212,6 +212,18 @@ describe('ページ設定 CSS', () => {
         expect(html('文', horizontal)).not.toContain('writing-mode: vertical-rl;');
     });
 
+    it('縦書き EPUB は互換用の -epub-writing-mode も出す（PDF では出さない）', () => {
+        // 無印 writing-mode を尊重しないリーダー向けに EPUB だけ -epub- 版を併記する。
+        const epub = render(parse('文'), vertical, 'epub');
+        expect(epub).toContain('-epub-writing-mode: vertical-rl;');
+        expect(epub).toContain('writing-mode: vertical-rl;');
+        const pdf = render(parse('文'), vertical, 'pdf');
+        expect(pdf).not.toContain('-epub-writing-mode');
+        expect(pdf).toContain('writing-mode: vertical-rl;');
+        // 横書き EPUB には縦書き指定は入らない。
+        expect(render(parse('文'), horizontal, 'epub')).not.toContain('-epub-writing-mode');
+    });
+
     it('用紙サイズが @page size に反映される（a6 = 105mm 148mm）', () => {
         expect(html('文', horizontal)).toContain('size: 105mm 148mm;');
     });

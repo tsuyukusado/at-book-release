@@ -160,7 +160,7 @@ html {
   font-family: "Shippori Mincho", serif;
   font-size: 9pt;
   line-height: 1.75;
-  ${isVertical ? 'writing-mode: vertical-rl;' : ''}
+  ${isVertical ? (format === 'epub' ? '-epub-writing-mode: vertical-rl;\n  writing-mode: vertical-rl;' : 'writing-mode: vertical-rl;') : ''}
   text-align: justify;
   text-justify: inter-character;
   line-break: strict;

@@ -123,6 +123,24 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
     //   本文サイズ（9pt）を引き継いでしまうため。ここを取り違えると縮小が無視される。
     const colophonFontPt = fitColophonFontPt(widthMm - inner - outer);
 
+    // 縦中横の宣言群。認識する構文がリーダーごとに違うため、EPUB では標準・WebKit(新)・
+    // EPUB3・レガシー(旧 WebKit) の全構文を併記して広く網を張る。Kindle など旧エンジンは
+    // 標準の text-combine-upright を無視し、レガシーの -webkit-text-combine: horizontal
+    // だけを解釈することがあり、これが無いと ！？ が縦中横にならず倒れる。
+    // PDF(Vivliostyle) は標準構文で足りるので併記しない。
+    const tcyDecls = format === 'epub'
+        ? [
+            'text-combine-upright: all;',
+            '-webkit-text-combine-upright: all;',
+            '-epub-text-combine-upright: all;',
+            '-webkit-text-combine: horizontal;',
+            'text-combine: horizontal;',
+          ].join('\n  ')
+        : [
+            'text-combine-upright: all;',
+            '-webkit-text-combine-upright: all;',
+          ].join('\n  ');
+
     return `
 @page {
   size: ${widthMm}mm ${heightMm}mm;
@@ -237,8 +255,7 @@ nav.atb-toc a.atb-toc-h2 {
    させる（横書きでは無効果）。 */
 nav.atb-toc a::after {
   content: leader('—') target-counter(attr(href url), page);
-  text-combine-upright: all;
-  -webkit-text-combine-upright: all;${format === 'epub' ? '\n  -epub-text-combine-upright: all;' : ''}
+  ${tcyDecls}
 }
 
 /* 箇条書き */
@@ -272,11 +289,10 @@ ruby.atb-kenten > rt > span {
   ${format === 'epub' ? 'font-size: 2.3em;' : 'transform: scale(2.3);'}
 }
 
-/* 縦中横。無印 text-combine-upright を尊重しないリーダー（Apple Books ほか）向けに
-   EPUB だけ -epub- 版も併記する。これが無いと ！？ が縦中横にならず倒れてしまう。 */
+/* 縦中横。認識する構文がリーダーごとに違うため、EPUB では全構文を併記する（tcyDecls）。
+   これが無い／標準構文しか無いと、Kindle 等では ！？ が縦中横にならず倒れてしまう。 */
 .atb-tcy {
-  text-combine-upright: all;
-  -webkit-text-combine-upright: all;${format === 'epub' ? '\n  -epub-text-combine-upright: all;' : ''}
+  ${tcyDecls}
 }
 
 /* コロフォン: 流れからは外し、最終ページのフッター中央にのみ出す。

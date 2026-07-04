@@ -224,14 +224,20 @@ describe('ページ設定 CSS', () => {
         expect(render(parse('文'), horizontal, 'epub')).not.toContain('-epub-writing-mode');
     });
 
-    it('縦中横は EPUB では互換用の -epub-text-combine-upright も出す（PDF では出さない）', () => {
-        // 無印 text-combine-upright を尊重しないリーダー向けに EPUB だけ -epub- 版を併記する。
-        // これが無いと ！？ が縦中横にならず倒れてしまう。
+    it('縦中横は EPUB では全構文（標準・-epub-・レガシー）を併記する（PDF では標準のみ）', () => {
+        // 認識する構文がリーダーごとに違う。Kindle 等は標準の text-combine-upright を無視し
+        // レガシーの -webkit-text-combine: horizontal だけを解釈するため、これが無いと
+        // ！？ が縦中横にならず倒れてしまう。EPUB は全構文を併記して広く網を張る。
         const epub = render(parse('本当に！？'), vertical, 'epub');
+        expect(epub).toContain('text-combine-upright: all;');
         expect(epub).toContain('-epub-text-combine-upright: all;');
+        expect(epub).toContain('-webkit-text-combine: horizontal;');
+        expect(epub).toContain('text-combine: horizontal;');
+        // PDF(Vivliostyle) は標準構文で足りるので EPUB 専用の互換構文は出さない。
         const pdf = render(parse('本当に！？'), vertical, 'pdf');
-        expect(pdf).not.toContain('-epub-text-combine-upright');
         expect(pdf).toContain('text-combine-upright: all;');
+        expect(pdf).not.toContain('-epub-text-combine-upright');
+        expect(pdf).not.toContain('text-combine: horizontal;');
     });
 
     it('用紙サイズが @page size に反映される（a6 = 105mm 148mm）', () => {

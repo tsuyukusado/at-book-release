@@ -3,7 +3,9 @@ import type { PaperConfig, OutputFormat } from "../domain";
 import { countChars } from "./countChars";
 
 export interface AtbConverter {
-    convert(atbText: string, config: PaperConfig): string;
+    // format は HTML/CSS の出力先（'pdf' | 'epub'）。省略時は 'pdf'。
+    // 圏点の拡大手法など、リーダー対応の都合で pdf と epub で CSS を出し分けるために使う。
+    convert(atbText: string, config: PaperConfig, format?: 'pdf' | 'epub'): string;
 }
 
 export interface FileReader {
@@ -52,22 +54,22 @@ export async function convertAtb(
     const outDir  = path.join('dist', 'at-book');
     const formats = config.formats && config.formats.length > 0 ? config.formats : ['pdf' as const];
 
-    // HTML は pdf / epub のときだけ 1 回組み、両フォーマットで共有する。
+    // HTML/CSS は出力先ごとに組む。圏点の拡大などリーダー対応の都合で pdf と epub では
+    // CSS が異なるため、共有せずフォーマット別に変換する（変換自体は文字列組みだけで軽い）。
     // web はプレーンテキストで HTML 経路を通らないため、呼び出し側（CLI）が別途出力する。
-    const needsHtml = formats.includes('pdf') || formats.includes('epub');
-    const htmlContent = needsHtml ? deps.converter.convert(atbText, config) : '';
-
     let pdfPath:  string | undefined;
     let epubPath: string | undefined;
     let pageCount = 0;
 
     if (formats.includes('pdf')) {
         pdfPath = path.join(outDir, `${base}-honbun.pdf`);
-        ({ pageCount } = await deps.pdfRunner.compile(htmlContent, pdfPath));
+        const html = deps.converter.convert(atbText, config, 'pdf');
+        ({ pageCount } = await deps.pdfRunner.compile(html, pdfPath));
     }
     if (formats.includes('epub')) {
         epubPath = path.join(outDir, `${base}.epub`);
-        await deps.pdfRunner.compileEpub(htmlContent, epubPath);
+        const html = deps.converter.convert(atbText, config, 'epub');
+        await deps.pdfRunner.compileEpub(html, epubPath);
     }
 
     const charCount = countChars(atbText);

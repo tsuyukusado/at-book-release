@@ -91,7 +91,7 @@ function fitColophonFontPt(contentWidthMm: number): number {
     return Math.round(Math.min(MAX_PT, fitPt) * 100) / 100;
 }
 
-function buildCss(config: PaperConfig): string {
+function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
     const isVertical = config.writingMode === 'vertical';
     const { widthMm, heightMm } = PAPER_DIMENSIONS_MM[config.paperSize];
 
@@ -259,12 +259,14 @@ ruby > rt {
 ruby.atb-kenten > rt {
   font-size: 0.22em;
 }
-/* ﹅ を inline-block の span に入れて拡大する。rt(ruby-text)自体は transform 非対応
-   なので効かない。span を scale すればレイアウト寸法(0.22em)は据え置きのまま＝字送りの
-   幅を変えずに、圏点の見た目だけ大きくできる。← 大きさはこの scale 値で調整する。 */
+/* PDF は span を拡大変換(scale)する。レイアウト寸法(0.22em)は据え置きのまま＝縦書きでも
+   字送り・行間を変えずに見た目だけ大きくできる。EPUB リーダーの多くは拡大変換に非対応で
+   （未対応スタイル警告になり拡大も効かず圏点が小さいまま）なので、代わりに font-size で
+   拡大する。リフロー表示では rt が少し大きくなるだけで問題なく、0.22em×2.3≒0.5em で
+   PDF と同等の見た目になる。← 大きさはこの倍率で調整する。 */
 ruby.atb-kenten > rt > span {
   display: inline-block;
-  transform: scale(2.3);
+  ${format === 'epub' ? 'font-size: 2.3em;' : 'transform: scale(2.3);'}
 }
 
 /* 縦中横 */
@@ -296,7 +298,7 @@ interface HeadingMeta {
 
 const COLOPHON = 'Created with at-book. Copyright © 2026 tsuyukusado. MIT License.';
 
-export function render(nodes: ParsedNode[], config: PaperConfig): string {
+export function render(nodes: ParsedNode[], config: PaperConfig, format: 'pdf' | 'epub' = 'pdf'): string {
     const isVertical = config.writingMode === 'vertical';
 
     // 事前スキャン: 番号の要否を決めるために、大見出しの総数と、各小見出しが
@@ -437,7 +439,7 @@ export function render(nodes: ParsedNode[], config: PaperConfig): string {
     // コロフォンは流れの最後に置く（最終ページのフッターに実行組版される）。
     body.push(`<div class="atb-colophon">${escapeHtml(COLOPHON)}</div>`);
 
-    const css = buildCss(config);
+    const css = buildCss(config, format);
 
     return `<!DOCTYPE html>
 <html lang="ja">

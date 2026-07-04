@@ -19,7 +19,9 @@ export interface HtmlToPdfRunner {
     compile(htmlContent: string, outputPath: string): Promise<{ pageCount: number }>;
     // 電子書籍向けの epub を書き出す。リフローするためページ数の概念は無い。
     // sections は改ページ境界で分割済みの spine 文書群（ファイル名付き）。各要素が 1 spine になる。
-    compileEpub(sections: EpubSection[], outputPath: string): Promise<void>;
+    // readingProgression はページ送りの向き（縦書き=rtl・横書き=ltr）。spine の
+    // page-progression-direction になり、リーダーのスクロール／ページめくり方向を決める。
+    compileEpub(sections: EpubSection[], outputPath: string, readingProgression: 'ltr' | 'rtl'): Promise<void>;
 }
 
 export interface ConfigReader {
@@ -72,8 +74,10 @@ export async function convertAtb(
     if (formats.includes('epub')) {
         epubPath = path.join(outDir, `${base}.epub`);
         // 改ページ境界で分割した spine 文書列を組み、複数 XHTML の EPUB として書き出す。
+        // ページ送りの向きは組み方向に合わせる（縦書きは右→左＝rtl、横書きは左→右＝ltr）。
         const sections = deps.converter.convertEpubSections(atbText, config);
-        await deps.pdfRunner.compileEpub(sections, epubPath);
+        const readingProgression = config.writingMode === 'vertical' ? 'rtl' : 'ltr';
+        await deps.pdfRunner.compileEpub(sections, epubPath, readingProgression);
     }
 
     const charCount = countChars(atbText);

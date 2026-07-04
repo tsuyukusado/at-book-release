@@ -179,7 +179,7 @@ async function runPdfBuild(htmlContent: string, outputPath: string): Promise<voi
 // （dist/at-book）で直接組むと、PDF 用 HTML（transform:scale を含む）や過去ビルドの残骸まで
 // manifest に混入し、リーダーが未対応スタイル警告を出す。これを避けるため、セクション・設定・
 // フォントだけを置いた専用の隔離ディレクトリで組み、終わったら片付ける。
-async function runEpubBuild(sections: EpubSection[], outputPath: string): Promise<void> {
+async function runEpubBuild(sections: EpubSection[], outputPath: string, readingProgression: 'ltr' | 'rtl'): Promise<void> {
     const base       = path.basename(outputPath, '.epub');
     const absOutPath = path.resolve(outputPath);
     const buildDir   = path.join(path.resolve(path.dirname(outputPath)), `.epub-build-${base}`);
@@ -192,8 +192,10 @@ async function runEpubBuild(sections: EpubSection[], outputPath: string): Promis
     await Promise.all(sections.map(s =>
         writeFile(path.join(buildDir, s.fileName), s.html, 'utf-8')));
 
+    // readingProgression は spine の page-progression-direction になり、リーダーの
+    // ページめくり／スクロール方向を決める（縦書き=rtl は右→左）。
     const configPath = path.join(buildDir, 'vivliostyle.config.js');
-    const configBody = { title: 'at-book', language: 'ja', entry: sections.map(s => s.fileName) };
+    const configBody = { title: 'at-book', language: 'ja', readingProgression, entry: sections.map(s => s.fileName) };
     await writeFile(configPath, `module.exports = ${JSON.stringify(configBody, null, 2)};\n`, 'utf-8');
 
     try {
@@ -210,7 +212,7 @@ export const vivliostyleRunner: HtmlToPdfRunner = {
         const pageCount = (await readPdfPageCount(path.resolve(outputPath))) ?? 0;
         return { pageCount };
     },
-    async compileEpub(sections: EpubSection[], outputPath: string): Promise<void> {
-        await runEpubBuild(sections, outputPath);
+    async compileEpub(sections: EpubSection[], outputPath: string, readingProgression: 'ltr' | 'rtl'): Promise<void> {
+        await runEpubBuild(sections, outputPath, readingProgression);
     }
 };

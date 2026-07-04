@@ -78,6 +78,10 @@ type RawFile = { dir: string[]; name: string; content: string };
 export function exportWeb(text: string): WebExport {
     const nodes = parse(text);
 
+    // 小見出し（レベル2）が文書全体に1つも無いなら、章フォルダの階層は作らず、
+    // 大見出しごとのファイルを作品フォルダ直下にまとめる。
+    const hasSubheading = nodes.some(n => n.kind === 'heading' && n.level === 2);
+
     const raw: RawFile[] = [];
     let sawHeading = false;
     let titleFirstLine: string | null = null;  // 作品フォルダ名の元（生テキスト）
@@ -111,8 +115,9 @@ export function exportWeb(text: string): WebExport {
                 if (firstHeadingText === null) firstHeadingText = node.text;
                 flush();
                 sawHeading = true;
-                if (node.level === 1) {
-                    // レベル1＝章。以降のファイルはこの章フォルダに入る。
+                if (node.level === 1 && hasSubheading) {
+                    // レベル1＝章。小見出しがある文書でのみ章フォルダを作り、
+                    // 以降のファイルをこの章フォルダに入れる。
                     // 章直下（小見出しが来る前）の本文は「章見出し名」のファイルにする。
                     currentChapter = node.text;
                 }

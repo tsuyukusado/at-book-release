@@ -118,6 +118,26 @@ describe('exportWeb（章/話への分割）', () => {
         ]);
     });
 
+    it('小見出しが1つも無ければ章フォルダを作らず作品フォルダ直下にまとめる', () => {
+        const r = exportWeb(
+            ['＠第一章', '本文A', '＠第二章', '本文B'].join('\n'),
+        );
+        const paths = r.files.map(f => [...f.dir, f.name].join('/')).sort();
+        expect(paths).toEqual(['01_第一章', '02_第二章'].sort());
+        // すべて作品フォルダ直下（章フォルダなし）。
+        expect(r.files.every(f => f.dir.length === 0)).toBe(true);
+    });
+
+    it('小見出しが1つでもあれば従来どおり章フォルダを作る', () => {
+        const r = exportWeb(
+            ['＠第一章', '本文A', '＠第二章', '＠＠出会い', '本文B'].join('\n'),
+        );
+        const paths = r.files.map(f => [...f.dir, f.name].join('/')).sort();
+        expect(paths).toEqual(
+            ['01_第一章/01_第一章', '02_第二章/01_出会い'].sort(),
+        );
+    });
+
     it('同じ見出しが重なっても話番号が異なるので名前が衝突しない', () => {
         const r = exportWeb(['＠章', '＠＠同話', 'あ', '＠＠同話', 'い'].join('\n'));
         const names = r.files.map(f => f.name).sort();

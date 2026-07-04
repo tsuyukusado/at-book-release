@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-import { writeFile, mkdir, readFile, copyFile } from "fs/promises";
+import { writeFile, mkdir, readFile, copyFile, rm } from "fs/promises";
 import { existsSync } from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -173,25 +173,34 @@ async function runPdfBuild(htmlContent: string, outputPath: string): Promise<voi
 // 書き出し、vivliostyle.config.js の entry 配列へ並べる。Vivliostyle は entry 1 つにつき
 // spine（XHTML）を 1 つ生成するので、これで改ページ境界ごとに独立した spine 文書となり、
 // リーダー上で確実に改ページされる（CSS の break-before:page はリフローでは無視されるため）。
+//
+// Vivliostyle は entry を含むディレクトリ内の HTML をまとめて EPUB へ取り込むため、出力先
+// （dist/at-book）で直接組むと、PDF 用 HTML（transform:scale を含む）や過去ビルドの残骸まで
+// manifest に混入し、リーダーが未対応スタイル警告を出す。これを避けるため、セクション・設定・
+// フォントだけを置いた専用の隔離ディレクトリで組み、終わったら片付ける。
 async function runEpubBuild(sections: string[], outputPath: string): Promise<void> {
-    const dir  = path.dirname(outputPath);
-    const base = path.basename(outputPath, '.epub');
-    const absDir     = path.resolve(dir);
+    const base       = path.basename(outputPath, '.epub');
     const absOutPath = path.resolve(outputPath);
+    const buildDir   = path.join(path.resolve(path.dirname(outputPath)), `.epub-build-${base}`);
 
-    const fontconfigFile = await prepareBuildDir(absDir);
+    await rm(buildDir, { recursive: true, force: true });
+    const fontconfigFile = await prepareBuildDir(buildDir);
 
     // 1 セクション = 1 HTML ファイル = 1 spine。名前は spine の順序どおりゼロ埋め連番にする。
     const entryFiles = sections.map((_, i) => `${base}-${String(i + 1).padStart(3, '0')}.html`);
     await Promise.all(sections.map((html, i) =>
-        writeFile(path.join(absDir, entryFiles[i]!), html, 'utf-8')));
+        writeFile(path.join(buildDir, entryFiles[i]!), html, 'utf-8')));
 
-    // 設定ファイルは独自名なので位置引数だと入力形式を推定できない。`-c` で明示指定する。
-    const configPath = path.join(absDir, `${base}.vivliostyle.config.js`);
+    const configPath = path.join(buildDir, 'vivliostyle.config.js');
     const configBody = { title: 'at-book', language: 'ja', entry: entryFiles };
     await writeFile(configPath, `module.exports = ${JSON.stringify(configBody, null, 2)};\n`, 'utf-8');
 
-    await runVivliostyle(['-c', path.resolve(configPath)], absOutPath, absDir, fontconfigFile, 'epub');
+    try {
+        // 設定ファイルは `-c` で明示指定する（隔離ディレクトリを entryContext にする）。
+        await runVivliostyle(['-c', configPath], absOutPath, buildDir, fontconfigFile, 'epub');
+    } finally {
+        await rm(buildDir, { recursive: true, force: true });
+    }
 }
 
 export const vivliostyleRunner: HtmlToPdfRunner = {

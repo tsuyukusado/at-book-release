@@ -9,3 +9,4 @@ export { defaultPaperConfig } from "./paperConfig";
 export type { CoverSpec } from "./coverSpec";
 export { calcSpineWidthMm, PAPER_DIMENSIONS_MM } from "./coverSpec";
 export type { WebFile, WebExport } from "./webExport";
+export type { EpubSection } from "./epubSection";

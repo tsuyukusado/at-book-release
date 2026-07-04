@@ -1,6 +1,6 @@
 import { parseInline } from "../parser";
 import type { InlineNode, ParsedNode } from "../parser";
-import type { PaperConfig } from "../../domain";
+import type { PaperConfig, EpubSection } from "../../domain";
 import { PAPER_DIMENSIONS_MM } from "../../domain";
 
 // ---- インライン要素 ----------------------------------------------------------
@@ -302,11 +302,15 @@ const COLOPHON = 'Created with at-book. Copyright © 2026 tsuyukusado. MIT Licen
 // 各ブロックが「直前で改ページするか（breakBefore）」「直後で改ページするか（breakAfter）」
 // を持つ。pageBreakOnly は ＠＠＠（中身の無い純粋な改ページ）で、EPUB では HTML を捨てて
 // 分割の合図だけに使う（PDF では atb-pagebreak の div をそのまま流し込む）。
+// headingId は見出しブロックの id（EPUB でどの spine に入ったか記録し、目次リンクを張り直す）。
+// isToc は目次ブロックの目印（EPUB でリンクをクロスファイル参照へ書き換える対象）。
 interface Block {
     html: string;
     breakBefore?: boolean;
     breakAfter?: boolean;
     pageBreakOnly?: boolean;
+    headingId?: string;
+    isToc?: boolean;
 }
 
 // 見出しの番号付けと目次項目の収集（PDF・EPUB 共通の事前パス）。
@@ -426,9 +430,9 @@ function buildBlocks(
                 const meta = headingMeta.get(i)!;
                 if (meta.level === 1) {
                     // 大見出しは改ページして始まる（EPUB では章ごとに spine 分割）。
-                    blocks.push({ html: `<h1 class="atb-h1" id="${meta.id}">${meta.titleHtml}</h1>`, breakBefore: true });
+                    blocks.push({ html: `<h1 class="atb-h1" id="${meta.id}">${meta.titleHtml}</h1>`, breakBefore: true, headingId: meta.id });
                 } else {
-                    blocks.push({ html: `<h2 class="atb-h2" id="${meta.id}">${meta.titleHtml}</h2>` });
+                    blocks.push({ html: `<h2 class="atb-h2" id="${meta.id}">${meta.titleHtml}</h2>`, headingId: meta.id });
                 }
                 break;
             }
@@ -439,8 +443,9 @@ function buildBlocks(
                 const entries = tocEntries
                     .map(e => `<a class="atb-toc-${e.level === 1 ? 'h1' : 'h2'}" href="#${e.id}">${e.titleHtml}</a>`)
                     .join('\n');
-                // 目次は前後で改ページ（EPUB では単独の spine 文書になる）。
-                blocks.push({ html: `<nav class="atb-toc"><div class="atb-toc-title">目次</div>\n${entries}\n</nav>`, breakBefore: true, breakAfter: true });
+                // 目次は前後で改ページ（EPUB では単独の spine 文書になる）。リンクは
+                // #id の同一文書内アンカーで組み、EPUB ではあとで実ファイル参照へ書き換える。
+                blocks.push({ html: `<nav class="atb-toc"><div class="atb-toc-title">目次</div>\n${entries}\n</nav>`, breakBefore: true, breakAfter: true, isToc: true });
                 break;
             }
             case 'paragraph': {
@@ -498,19 +503,33 @@ export function render(nodes: ParsedNode[], config: PaperConfig, format: 'pdf' |
     return wrapDocument(body.join('\n'), buildCss(config, format));
 }
 
-// EPUB 用（リフロー）。改ページ境界で spine（XHTML 文書）を分割して返す。
+// EPUB の各 spine のファイル名（Vivliostyle への入力名）。ビルド後は同名の .xhtml になる。
+// 隔離ディレクトリで単独ビルドするため、連番だけで衝突しない。
+function sectionFileName(index: number): string {
+    return `part-${String(index + 1).padStart(3, '0')}.html`;
+}
+// 目次リンクが指す先。入力 .html はビルド後 .xhtml になるので参照も .xhtml で張る。
+function sectionHref(index: number): string {
+    return sectionFileName(index).replace(/\.html$/, '.xhtml');
+}
+
+// EPUB 用（リフロー）。改ページ境界で spine（XHTML 文書）に分割して返す。
 // リフロー型 EPUB リーダーは CSS の break-before:page を尊重しないため、改ページは
 // 「新しい spine 文書は必ず新しいページから始まる」という EPUB の性質で実現する。
-export function renderSections(nodes: ParsedNode[], config: PaperConfig): string[] {
+// 分割で見出しが別ファイルへ移るため、目次リンクは #id の同一文書内参照から
+// 「見出しが実在する spine ファイル名 + #id」のクロスファイル参照へ書き換える。
+export function renderSections(nodes: ParsedNode[], config: PaperConfig): EpubSection[] {
     const isVertical = config.writingMode === 'vertical';
     const { headingMeta, tocEntries } = computeHeadingMeta(nodes, isVertical);
     const blocks = buildBlocks(nodes, isVertical, headingMeta, tocEntries);
     const css = buildCss(config, 'epub');
 
-    // ブロック列を改ページ境界でセクション（＝spine 文書）に切り分ける。
-    const sections: string[][] = [];
-    let current: string[] = [];
+    // ブロック列を改ページ境界でセクション（＝spine 文書）に切り分けつつ、
+    // 各見出し id がどの section に入ったかを記録する（目次リンクの張り直し用）。
+    const sections: Block[][] = [];
+    let current: Block[] = [];
     let pendingBreak = false;
+    const idToSection = new Map<string, number>();
     const flush = () => {
         if (current.length > 0) {
             sections.push(current);
@@ -525,14 +544,26 @@ export function renderSections(nodes: ParsedNode[], config: PaperConfig): string
         }
         if ((b.breakBefore || pendingBreak) && current.length > 0) flush();
         pendingBreak = false;
-        current.push(b.html);
+        // この current が最終的に入る section の添字は sections.length（flush で末尾に積むため）。
+        if (b.headingId) idToSection.set(b.headingId, sections.length);
+        current.push(b);
         if (b.breakAfter) flush();
     }
     flush();
 
     // コロフォンは最後の spine 文書の流れの末尾へ。1 文書も無ければ 1 つ作る。
     if (sections.length === 0) sections.push([]);
-    sections[sections.length - 1]!.push(COLOPHON_HTML);
+    sections[sections.length - 1]!.push({ html: COLOPHON_HTML });
 
-    return sections.map(frags => wrapDocument(frags.join('\n'), css));
+    // 目次の #id を、その見出しが入った spine ファイルへのクロスファイル参照に置き換える。
+    const rewriteTocLinks = (html: string): string =>
+        html.replace(/href="#(atb-h\d+)"/g, (whole, id: string) => {
+            const sec = idToSection.get(id);
+            return sec === undefined ? whole : `href="${sectionHref(sec)}#${id}"`;
+        });
+
+    return sections.map((blks, i) => {
+        const body = blks.map(b => (b.isToc ? rewriteTocLinks(b.html) : b.html)).join('\n');
+        return { fileName: sectionFileName(i), html: wrapDocument(body, css) };
+    });
 }

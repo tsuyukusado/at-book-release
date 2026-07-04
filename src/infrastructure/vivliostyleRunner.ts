@@ -5,6 +5,7 @@ import * as os from "os";
 import * as path from "path";
 import { PDFDocument } from "pdf-lib";
 import type { HtmlToPdfRunner } from "../usecase";
+import type { EpubSection } from "../domain";
 
 function spawnAsync(cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -178,7 +179,7 @@ async function runPdfBuild(htmlContent: string, outputPath: string): Promise<voi
 // （dist/at-book）で直接組むと、PDF 用 HTML（transform:scale を含む）や過去ビルドの残骸まで
 // manifest に混入し、リーダーが未対応スタイル警告を出す。これを避けるため、セクション・設定・
 // フォントだけを置いた専用の隔離ディレクトリで組み、終わったら片付ける。
-async function runEpubBuild(sections: string[], outputPath: string): Promise<void> {
+async function runEpubBuild(sections: EpubSection[], outputPath: string): Promise<void> {
     const base       = path.basename(outputPath, '.epub');
     const absOutPath = path.resolve(outputPath);
     const buildDir   = path.join(path.resolve(path.dirname(outputPath)), `.epub-build-${base}`);
@@ -186,13 +187,13 @@ async function runEpubBuild(sections: string[], outputPath: string): Promise<voi
     await rm(buildDir, { recursive: true, force: true });
     const fontconfigFile = await prepareBuildDir(buildDir);
 
-    // 1 セクション = 1 HTML ファイル = 1 spine。名前は spine の順序どおりゼロ埋め連番にする。
-    const entryFiles = sections.map((_, i) => `${base}-${String(i + 1).padStart(3, '0')}.html`);
-    await Promise.all(sections.map((html, i) =>
-        writeFile(path.join(buildDir, entryFiles[i]!), html, 'utf-8')));
+    // 1 セクション = 1 HTML ファイル = 1 spine。ファイル名はレンダラが決める（目次リンクが
+    // その名前を指すため、書き出す名前と entry を必ずレンダラ由来の fileName に合わせる）。
+    await Promise.all(sections.map(s =>
+        writeFile(path.join(buildDir, s.fileName), s.html, 'utf-8')));
 
     const configPath = path.join(buildDir, 'vivliostyle.config.js');
-    const configBody = { title: 'at-book', language: 'ja', entry: entryFiles };
+    const configBody = { title: 'at-book', language: 'ja', entry: sections.map(s => s.fileName) };
     await writeFile(configPath, `module.exports = ${JSON.stringify(configBody, null, 2)};\n`, 'utf-8');
 
     try {
@@ -209,7 +210,7 @@ export const vivliostyleRunner: HtmlToPdfRunner = {
         const pageCount = (await readPdfPageCount(path.resolve(outputPath))) ?? 0;
         return { pageCount };
     },
-    async compileEpub(sections: string[], outputPath: string): Promise<void> {
+    async compileEpub(sections: EpubSection[], outputPath: string): Promise<void> {
         await runEpubBuild(sections, outputPath);
     }
 };

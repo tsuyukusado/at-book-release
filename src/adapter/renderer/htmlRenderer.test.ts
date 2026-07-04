@@ -10,8 +10,10 @@ function html(src: string, config: PaperConfig): string {
     return render(parse(src), config);
 }
 
+// renderSections はファイル名付きの spine 群を返す。既存テストは本文 HTML だけ見るので
+// html を取り出す。ファイル名やリンクを見るテストは renderSections を直接使う。
 function sections(src: string, config: PaperConfig = horizontal): string[] {
-    return renderSections(parse(src), config);
+    return renderSections(parse(src), config).map(s => s.html);
 }
 
 // <body> の中身だけ取り出す。CSS のコメントやセレクタ名（例: 「最後」の「後」や
@@ -314,5 +316,34 @@ describe('EPUB の spine 分割（renderSections）', () => {
         const s = sections('前\n＠＠＠\n後');
         expect(bodyOf(s[0]!)).not.toContain('atb-colophon');
         expect(bodyOf(s[s.length - 1]!)).toContain('atb-colophon');
+    });
+
+    it('各 spine に連番のファイル名が付く', () => {
+        const s = renderSections(parse('＠一\n本文\n＠二\n本文'), horizontal);
+        expect(s.map(x => x.fileName)).toEqual(['part-001.html', 'part-002.html']);
+    });
+
+    it('目次リンクは、見出しが実在する spine ファイルへのクロスファイル参照になる', () => {
+        // 目次(part-001) / 第一章(part-002) / 第二章(part-003)。
+        // 分割前の #atb-hN ではなく part-00X.xhtml#atb-hN を指すこと。
+        const s = renderSections(parse('＠目次\n＠第一章\n本文\n＠第二章\n本文'), horizontal);
+        const tocBody = bodyOf(s[0]!.html);
+        // 目次自身の中に、生の #atb-h への同一文書内リンクは残っていない。
+        expect(tocBody).not.toMatch(/href="#atb-h\d/);
+        // 第一章は part-002、第二章は part-003 を指す。
+        expect(tocBody).toContain('href="part-002.xhtml#atb-h1"');
+        expect(tocBody).toContain('href="part-003.xhtml#atb-h2"');
+        // 参照先ファイルに実際にその id の見出しがある。
+        expect(s[1]!.fileName).toBe('part-002.html');
+        expect(s[1]!.html).toContain('id="atb-h1"');
+        expect(s[2]!.fileName).toBe('part-003.html');
+        expect(s[2]!.html).toContain('id="atb-h2"');
+    });
+
+    it('PDF（単一文書）の目次リンクは従来どおり同一文書内アンカーのまま', () => {
+        // 分割しない render() では #id で正しく飛べるので書き換えない。
+        const pdf = render(parse('＠目次\n＠第一章\n本文'), horizontal, 'pdf');
+        expect(pdf).toContain('href="#atb-h1"');
+        expect(pdf).not.toContain('.xhtml#atb-h1');
     });
 });

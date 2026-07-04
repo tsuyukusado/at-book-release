@@ -6,7 +6,7 @@ import { defaultPaperConfig } from "../domain";
 
 const VALID_PAPER_SIZES: PaperSize[]   = ['a4', 'a5', 'a6', 'b5'];
 const VALID_WRITING_MODES: WritingMode[] = ['vertical', 'horizontal'];
-const VALID_FORMATS: OutputFormat[]      = ['pdf', 'epub'];
+const VALID_FORMATS: OutputFormat[]      = ['pdf', 'epub', 'web'];
 
 export const nodeConfigReader: ConfigReader = {
     async read(atbPath: string): Promise<PaperConfig> {

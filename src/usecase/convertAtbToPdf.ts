@@ -48,12 +48,14 @@ export async function convertAtb(
         deps.fileReader.read(input.atbPath),
         deps.configReader.read(input.atbPath),
     ]);
-    // HTML は 1 回だけ組み、要求されたフォーマットぶんだけ出力へ流す。
-    const htmlContent = deps.converter.convert(atbText, config);
-
     const base    = path.basename(input.atbPath, '.atb');
     const outDir  = path.join('dist', 'at-book');
     const formats = config.formats && config.formats.length > 0 ? config.formats : ['pdf' as const];
+
+    // HTML は pdf / epub のときだけ 1 回組み、両フォーマットで共有する。
+    // web はプレーンテキストで HTML 経路を通らないため、呼び出し側（CLI）が別途出力する。
+    const needsHtml = formats.includes('pdf') || formats.includes('epub');
+    const htmlContent = needsHtml ? deps.converter.convert(atbText, config) : '';
 
     let pdfPath:  string | undefined;
     let epubPath: string | undefined;

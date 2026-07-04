@@ -12,6 +12,16 @@ function escapeHtml(text: string): string {
         .replace(/>/g, '&gt;');
 }
 
+// ！？ の 2 文字ペアに対応する Unicode 合成済み文字。これらは Vertical_Orientation=U
+// （UTR#50）なので、縦書きでは text-combine-upright に頼らず単独グリフとして正立する。
+// tcy 未対応リーダー（Kindle など）でも倒れないのが利点。ShipporiMincho も全て収録済み。
+const TCY_COMBINED: Record<string, string> = {
+    '！！': '‼', // U+203C
+    '！？': '⁉', // U+2049
+    '？！': '⁈', // U+2048
+    '？？': '⁇', // U+2047
+};
+
 function renderInlineNode(node: InlineNode, isVertical: boolean): string {
     switch (node.kind) {
         case 'text':
@@ -33,10 +43,13 @@ function renderInlineNode(node: InlineNode, isVertical: boolean): string {
             // ・・ → 三点リーダー。level は元の中黒の数。
             return escapeHtml('…'.repeat(node.level));
         case 'tatechuyoko':
-            // 縦書き時のみ縦中横。横書きは素通し。
-            return isVertical
-                ? `<span class="atb-tcy">${escapeHtml(node.text.replace(/！/g, '!').replace(/？/g, '?'))}</span>`
-                : escapeHtml(node.text);
+            // 横書きは素通し。縦書きは縦中横にする。
+            if (!isVertical) return escapeHtml(node.text);
+            // 2 文字ペアは合成済み文字に置換して単独グリフで正立させる（tcy 不要。Kindle 対策）。
+            const combined = TCY_COMBINED[node.text];
+            if (combined) return escapeHtml(combined);
+            // 3 文字以上など合成文字が無いものは従来の縦中横（半角化＋text-combine-upright）。
+            return `<span class="atb-tcy">${escapeHtml(node.text.replace(/！/g, '!').replace(/？/g, '?'))}</span>`;
     }
 }
 

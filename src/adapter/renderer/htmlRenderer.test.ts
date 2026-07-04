@@ -83,10 +83,22 @@ describe('インライン記法', () => {
         expect(html('そう・・', horizontal)).toContain('そう……');
     });
 
-    it('縦中横（！？の2連以上）は縦書きでは半角化して span、横書きでは素通し', () => {
-        expect(html('本当に！？', vertical)).toContain('<span class="atb-tcy">!?</span>');
-        expect(html('本当に！？', horizontal)).not.toContain('<span class="atb-tcy">');
+    it('縦中横の2文字ペアは縦書きでは合成済み文字（正立）に、横書きでは素通し', () => {
+        // ！？→⁉, ！！→‼, ？！→⁈, ？？→⁇。Vertical_Orientation=U で tcy 無しに正立する。
+        expect(html('本当に！？', vertical)).toContain('⁉');
+        // 合成文字に置換されるので tcy span は使われない（.atb-tcy の CSS 定義は別途残る）。
+        expect(html('本当に！？', vertical)).not.toContain('<span class="atb-tcy">');
+        expect(html('えっ！！', vertical)).toContain('‼');
+        expect(html('なぜ？？', vertical)).toContain('⁇');
+        expect(html('何？！', vertical)).toContain('⁈');
+        // 横書きは合成せず素通し。
         expect(html('本当に！？', horizontal)).toContain('<p class="atb-p">本当に！？</p>');
+        expect(html('本当に！？', horizontal)).not.toContain('⁉');
+    });
+
+    it('縦中横で合成文字が無い3文字以上は従来通り半角化して span', () => {
+        // ！？！ のような 3 連には合成済み文字が無いため、text-combine-upright にフォールバック。
+        expect(html('うおお！？！', vertical)).toContain('<span class="atb-tcy">!?!</span>');
     });
 
     it('HTML特殊文字はエスケープされる', () => {

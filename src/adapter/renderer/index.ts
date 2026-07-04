@@ -1,1 +1,1 @@
-export { render } from "./latexRenderer";
+export { render, renderSections } from "./htmlRenderer";

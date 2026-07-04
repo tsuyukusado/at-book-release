@@ -1,4 +1,7 @@
 {
   "paperSize": "a6",
-  "writingMode": "vertical"
+  "writingMode": "horizontal",
+  "autoGenerate": [
+    "test.atb"
+  ]
 }

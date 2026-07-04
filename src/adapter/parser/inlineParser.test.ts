@@ -1,0 +1,188 @@
+import { describe, it, expect } from 'vitest';
+import { parseInline } from './inlineParser';
+
+describe('ダッシュ記法（＠ー）', () => {
+    it('＠ー は dash level 1（ダッシュ２連）になる', () => {
+        const nodes = parseInline('闇の中＠ー');
+        expect(nodes).toEqual([
+            { kind: 'text', text: '闇の中' },
+            expect.objectContaining({ kind: 'dash', level: 1 }),
+        ]);
+    });
+
+    it('＠ーー は dash level 2（ダッシュ４連）になる', () => {
+        const nodes = parseInline('＠ーー');
+        expect(nodes).toEqual([
+            expect.objectContaining({ kind: 'dash', level: 2 }),
+        ]);
+    });
+
+    it('＠なしの ーー はダッシュにならず、ただのテキストのまま', () => {
+        const nodes = parseInline('ーー');
+        expect(nodes).toEqual([{ kind: 'text', text: 'ーー' }]);
+    });
+
+    it('ルビ（＠夜明け（よあけ））はダッシュと誤認されない', () => {
+        const nodes = parseInline('＠夜明け（よあけ）');
+        expect(nodes).toEqual([
+            expect.objectContaining({ kind: 'ruby', text: '夜明け', ruby: 'よあけ' }),
+        ]);
+    });
+
+    it('同じ行に ＠ー と ＠圏点 が混在しても、間のテキストを巻き込まない', () => {
+        // ＠始まり（・）のルビ判定が先頭の ＠ー まで遡って飲み込まないこと
+        const nodes = parseInline('＠ーここが、＠始まり（・）だったのだ。');
+        expect(nodes).toEqual([
+            expect.objectContaining({ kind: 'dash', level: 1 }),
+            { kind: 'text', text: 'ここが、' },
+            expect.objectContaining({ kind: 'kenten', text: '始まり' }),
+            { kind: 'text', text: 'だったのだ。' },
+        ]);
+    });
+
+    it('＠ー の直後に全角括弧（笑）があってもダッシュを巻き込まない', () => {
+        const nodes = parseInline('＠ー（笑）');
+        expect(nodes).toEqual([
+            expect.objectContaining({ kind: 'dash', level: 1 }),
+            { kind: 'text', text: '（笑）' },
+        ]);
+    });
+
+    it('同じ行の後方にルビ（＠なしの語（読み））があっても ＠ー を巻き込まない', () => {
+        // 実際の小説本文パターン: ダッシュの後に括弧付き注記が続く。
+        // ＠ー の ＠ が後方の（かのじょ）と組んでルビ化してしまわないこと。
+        const nodes = parseInline('「まさか＠ー」彼女（かのじょ）は息をのんだ。');
+        expect(nodes).toEqual([
+            { kind: 'text', text: '「まさか' },
+            expect.objectContaining({ kind: 'dash', level: 1 }),
+            { kind: 'text', text: '」彼女（かのじょ）は息をのんだ。' },
+        ]);
+    });
+
+    it('行内に ＠ー と本物のルビ（＠語（読み））が両方あっても、両方正しく解釈する', () => {
+        const nodes = parseInline('＠夜明け（よあけ）の＠ー');
+        expect(nodes).toEqual([
+            expect.objectContaining({ kind: 'ruby', text: '夜明け', ruby: 'よあけ' }),
+            { kind: 'text', text: 'の' },
+            expect.objectContaining({ kind: 'dash', level: 1 }),
+        ]);
+    });
+});
+
+describe('半角数字の縦中横', () => {
+    it('半角1桁は縦中横になる', () => {
+        const nodes = parseInline('第7章');
+        expect(nodes).toEqual([
+            { kind: 'text', text: '第' },
+            { kind: 'tatechuyoko', text: '7' },
+            { kind: 'text', text: '章' },
+        ]);
+    });
+
+    it('半角2桁は縦中横になる', () => {
+        const nodes = parseInline('午後10時');
+        expect(nodes).toEqual([
+            { kind: 'text', text: '午後' },
+            { kind: 'tatechuyoko', text: '10' },
+            { kind: 'text', text: '時' },
+        ]);
+    });
+
+    it('半角3桁以上は縦中横にせず、そのままテキストのまま', () => {
+        const nodes = parseInline('全123ページ');
+        expect(nodes).toEqual([{ kind: 'text', text: '全123ページ' }]);
+    });
+
+    it('数字の間に非数字を挟めば、それぞれ1〜2桁ずつ縦中横になる', () => {
+        const nodes = parseInline('12月8日');
+        expect(nodes).toEqual([
+            { kind: 'tatechuyoko', text: '12' },
+            { kind: 'text', text: '月' },
+            { kind: 'tatechuyoko', text: '8' },
+            { kind: 'text', text: '日' },
+        ]);
+    });
+
+    it('全角数字は対象外（縦中横にしない）', () => {
+        const nodes = parseInline('第１０章');
+        expect(nodes).toEqual([{ kind: 'text', text: '第１０章' }]);
+    });
+
+    it('半角英字は対象外（数字だけが縦中横）', () => {
+        const nodes = parseInline('AI時代');
+        expect(nodes).toEqual([{ kind: 'text', text: 'AI時代' }]);
+    });
+
+    it('既存の ！？ 縦中横と共存できる', () => {
+        const nodes = parseInline('まさか10連勝！？');
+        expect(nodes).toEqual([
+            { kind: 'text', text: 'まさか' },
+            { kind: 'tatechuyoko', text: '10' },
+            { kind: 'text', text: '連勝' },
+            { kind: 'tatechuyoko', text: '！？' },
+        ]);
+    });
+});
+
+describe('！／？のあとに文章が続く場合の全角スペース', () => {
+    it('単独の ！ のあとに文章が続けば全角スペースを入れる', () => {
+        const nodes = parseInline('本当！そうだ');
+        expect(nodes).toEqual([{ kind: 'text', text: '本当！　そうだ' }]);
+    });
+
+    it('単独の ？ のあとに文章が続けば全角スペースを入れる', () => {
+        const nodes = parseInline('なぜ？答えは簡単だ');
+        expect(nodes).toEqual([{ kind: 'text', text: 'なぜ？　答えは簡単だ' }]);
+    });
+
+    it('行末（段落の終わり）の ！ にはスペースを入れない', () => {
+        const nodes = parseInline('やった！');
+        expect(nodes).toEqual([{ kind: 'text', text: 'やった！' }]);
+    });
+
+    it('閉じ括弧・閉じ引用符の直前にはスペースを入れない', () => {
+        const nodes = parseInline('「本当！」と彼は言った');
+        expect(nodes).toEqual([{ kind: 'text', text: '「本当！」と彼は言った' }]);
+    });
+
+    it('開き括弧・開き引用符の直前にはスペースを入れない', () => {
+        const nodes = parseInline('本当！「そうだ」');
+        expect(nodes).toEqual([{ kind: 'text', text: '本当！「そうだ」' }]);
+    });
+
+    it('句読点の直前にはスペースを入れない', () => {
+        const nodes = parseInline('えっ！。');
+        expect(nodes).toEqual([{ kind: 'text', text: 'えっ！。' }]);
+    });
+
+    it('すでに全角スペースがある場合は二重にしない', () => {
+        const nodes = parseInline('本当！　そうだ');
+        expect(nodes).toEqual([{ kind: 'text', text: '本当！　そうだ' }]);
+    });
+
+    it('！？ の連続（縦中横）のあとに文章が続けば、縦中横ノードの後ろに全角スペースを付ける', () => {
+        const nodes = parseInline('まさか！？そうか');
+        expect(nodes).toEqual([
+            { kind: 'text', text: 'まさか' },
+            { kind: 'tatechuyoko', text: '！？' },
+            { kind: 'text', text: '　そうか' },
+        ]);
+    });
+
+    it('行末の ！？（縦中横）にはスペースを入れない', () => {
+        const nodes = parseInline('まさか！？');
+        expect(nodes).toEqual([
+            { kind: 'text', text: 'まさか' },
+            { kind: 'tatechuyoko', text: '！？' },
+        ]);
+    });
+
+    it('！ のあとに縦中横の半角数字が続く場合もスペースを入れる', () => {
+        const nodes = parseInline('やった！10連勝');
+        expect(nodes).toEqual([
+            { kind: 'text', text: 'やった！　' },
+            { kind: 'tatechuyoko', text: '10' },
+            { kind: 'text', text: '連勝' },
+        ]);
+    });
+});

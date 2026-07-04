@@ -185,4 +185,24 @@ describe('！／？のあとに文章が続く場合の全角スペース', () =
             { kind: 'text', text: '連勝' },
         ]);
     });
+
+    it('！♡ は一続きとして扱い、間にスペースを割り込ませない', () => {
+        const nodes = parseInline('すき！♡だいすき');
+        expect(nodes).toEqual([{ kind: 'text', text: 'すき！♡　だいすき' }]);
+    });
+
+    it('単独の ♡ のあとに文章が続けば ！ と同じく全角スペースを入れる', () => {
+        const nodes = parseInline('かわいい♡そうだね');
+        expect(nodes).toEqual([{ kind: 'text', text: 'かわいい♡　そうだね' }]);
+    });
+
+    it('行末の ♡ にはスペースを入れない', () => {
+        const nodes = parseInline('すき♡');
+        expect(nodes).toEqual([{ kind: 'text', text: 'すき♡' }]);
+    });
+
+    it('塗りつぶしの ♥ も ♡ と同じように扱う', () => {
+        const nodes = parseInline('すき♥だいすき');
+        expect(nodes).toEqual([{ kind: 'text', text: 'すき♥　だいすき' }]);
+    });
 });

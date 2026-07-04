@@ -214,7 +214,7 @@ function toRepoRelativePath(p: string): string {
 
 async function runConvert(atbPath: string): Promise<void> {
     atbPath = toRepoRelativePath(atbPath);
-    const { pdfPath, epubPath, pageCount, charCount, config } = await convertAtb(
+    const { pdfPath, epubPath, pageCount, charCount, formats, config } = await convertAtb(
         {
             converter:    atbConverter,
             fileReader:   nodeFileReader,
@@ -225,6 +225,8 @@ async function runConvert(atbPath: string): Promise<void> {
     );
     if (pdfPath)  console.log(`生成完了: ${pdfPath}`);
     if (epubPath) console.log(`生成完了: ${epubPath}`);
+    // web はプレーンテキストで HTML 経路を通らないため、ここで別途出力する。
+    if (formats.includes('web')) await runWeb(atbPath);
     console.log(`  総文字数 : ${charCount.toLocaleString('ja-JP')}文字`);
 
     // 差分を算出してログに記録する。

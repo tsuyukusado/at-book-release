@@ -35,6 +35,11 @@ describe('configReader の formats パース', () => {
         expect(cfg.formats).toEqual(['epub', 'pdf']);
     });
 
+    it('web も有効なフォーマットとして採用する', async () => {
+        const cfg = await readConfig({ formats: ['pdf', 'web'] });
+        expect(cfg.formats).toEqual(['pdf', 'web']);
+    });
+
     it('配列でない・有効値ゼロなら undefined', async () => {
         expect((await readConfig({ formats: 'epub' })).formats).toBeUndefined();
         expect((await readConfig({ formats: ['mobi'] })).formats).toBeUndefined();

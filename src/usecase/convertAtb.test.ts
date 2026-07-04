@@ -64,4 +64,21 @@ describe('convertAtb のフォーマット振り分け', () => {
         await convertAtb(deps, { atbPath: 'doc/test.atb' });
         expect(convertCount).toBe(1);
     });
+
+    it('formats:["web"] なら HTML を組まず pdf/epub も生成しない（web は CLI 側で出力）', async () => {
+        let convertCount = 0;
+        const { deps, calls } = makeDeps({ ...base, formats: ['web'] });
+        const spied = {
+            ...deps,
+            converter: { convert: () => { convertCount++; return '<html></html>'; } },
+        };
+        const out = await convertAtb(spied, { atbPath: 'doc/test.atb' });
+        expect(convertCount).toBe(0);
+        expect(calls.pdf).toEqual([]);
+        expect(calls.epub).toEqual([]);
+        expect(out.pdfPath).toBeUndefined();
+        expect(out.epubPath).toBeUndefined();
+        expect(out.pageCount).toBe(0);
+        expect(out.formats).toEqual(['web']);
+    });
 });

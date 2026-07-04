@@ -183,7 +183,10 @@ p.atb-p-noindent {
   text-indent: 0;
 }
 
-/* 空行: 1行分のアキ (本文の line-height 1.75 に合わせる) */
+/* 空行: 1行分のアキ (本文の line-height 1.75 に合わせる)。
+   中身は &#160;（不可視スペース）を入れて実体のある行ボックスを持たせる。
+   リフロー型 EPUB リーダーは中身の無い空ブロックを潰して block-size を無視する
+   ことが多く、空行が消えてしまうため。PDF は 1 行の内容が block-size に収まり見た目不変。 */
 .atb-blank {
   block-size: 1.75em;
 }
@@ -456,7 +459,9 @@ function buildBlocks(
                 break;
             }
             case 'blank':
-                blocks.push({ html: '<div class="atb-blank"></div>' });
+                // 中身の &#160; は必須。空の <div> だとリフロー型 EPUB リーダーが
+                // 潰して空行が消えるため、実体のある行ボックスを持たせる。
+                blocks.push({ html: '<div class="atb-blank">&#160;</div>' });
                 break;
             case 'pageBreak':
                 // ＠＠＠。PDF は break-before:page の div、EPUB は spine 分割の合図。

@@ -224,6 +224,16 @@ describe('ページ設定 CSS', () => {
         expect(render(parse('文'), horizontal, 'epub')).not.toContain('-epub-writing-mode');
     });
 
+    it('縦中横は EPUB では互換用の -epub-text-combine-upright も出す（PDF では出さない）', () => {
+        // 無印 text-combine-upright を尊重しないリーダー向けに EPUB だけ -epub- 版を併記する。
+        // これが無いと ！？ が縦中横にならず倒れてしまう。
+        const epub = render(parse('本当に！？'), vertical, 'epub');
+        expect(epub).toContain('-epub-text-combine-upright: all;');
+        const pdf = render(parse('本当に！？'), vertical, 'pdf');
+        expect(pdf).not.toContain('-epub-text-combine-upright');
+        expect(pdf).toContain('text-combine-upright: all;');
+    });
+
     it('用紙サイズが @page size に反映される（a6 = 105mm 148mm）', () => {
         expect(html('文', horizontal)).toContain('size: 105mm 148mm;');
     });

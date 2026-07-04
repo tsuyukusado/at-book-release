@@ -197,8 +197,8 @@ describe('ブロック要素', () => {
         expect(out.match(/<ul class="atb-list">/g)?.length).toBe(2);
     });
 
-    it('空行は atb-blank になる', () => {
-        expect(html('文\n\n文', horizontal)).toContain('<div class="atb-blank"></div>');
+    it('空行は atb-blank になり、中身に &#160; を持つ（EPUB で空ブロックが潰れて消えないように）', () => {
+        expect(html('文\n\n文', horizontal)).toContain('<div class="atb-blank">&#160;</div>');
     });
 
     it('＠＠＠ は改ページになる', () => {
@@ -283,6 +283,11 @@ describe('EPUB の spine 分割（renderSections）', () => {
         expect(s).toHaveLength(1);
         expect(bodyOf(s[0]!)).toContain('ひとつめ');
         expect(bodyOf(s[0]!)).toContain('ふたつめ');
+    });
+
+    it('EPUB の空行 div は中身に &#160; を持ち、空ブロックで潰れて消えないようにする', () => {
+        const s = sections('前\n\n後');
+        expect(bodyOf(s[0]!)).toContain('<div class="atb-blank">&#160;</div>');
     });
 
     it('各セクションは完全な HTML 文書になる', () => {

@@ -79,17 +79,18 @@ describe('exportWeb（章/話への分割）', () => {
         const f = result.files.find(f => f.name.endsWith('_第一章'));
         expect(f?.dir).toEqual(['01_第一章']);
         expect(f?.name).toBe('01_第一章');
-        expect(f?.content).toBe('章の導入本文。');
+        expect(f?.content).toBe('　章の導入本文。');
     });
 
-    it('話ファイルの本文はウェブ記法に変換される', () => {
+    it('話ファイルの本文はウェブ記法に変換され、地の文は行頭字下げされる', () => {
         const f = result.files.find(f => f.name.endsWith('_出会い'));
-        expect(f?.content).toBe('「｜彼女《かのじょ》は笑った」\n本文――');
+        // 1行目は「で始まる会話なので字下げなし、2行目の地の文は字下げされる。
+        expect(f?.content).toBe('「｜彼女《かのじょ》は笑った」\n　本文――');
     });
 
     it('目次はまるごと消え、改ページは改行になる', () => {
         const f = result.files.find(f => f.name.endsWith('_別れ'));
-        expect(f?.content).toBe('点｜文《﹅》｜字《﹅》を打つ\n\n続き');
+        expect(f?.content).toBe('　点｜文《﹅》｜字《﹅》を打つ\n\n　続き');
     });
 
     it('話番号は章ごとに 01 からリセットし、章番号は作品を通して振る', () => {
@@ -114,7 +115,7 @@ describe('exportWeb（章/話への分割）', () => {
         const r = exportWeb('ただの文章\nもう一行');
         expect(r.folderName).toBe('ただの文章');
         expect(r.files).toEqual([
-            { dir: [], name: '01_ただの文章', content: 'ただの文章\nもう一行' },
+            { dir: [], name: '01_ただの文章', content: '　ただの文章\n　もう一行' },
         ]);
     });
 
@@ -142,5 +143,39 @@ describe('exportWeb（章/話への分割）', () => {
         const r = exportWeb(['＠章', '＠＠同話', 'あ', '＠＠同話', 'い'].join('\n'));
         const names = r.files.map(f => f.name).sort();
         expect(names).toEqual(['01_同話', '02_同話']);
+    });
+
+    it('地の文は行頭を全角スペースで字下げし、カッコ始まりの行は下げない', () => {
+        const r = exportWeb(
+            [
+                '＠章',
+                '＠＠話',
+                '地の文です。',
+                '「会話文です」',
+                '（補足です）',
+                '『二重カギも』',
+                '……と口ごもった',
+            ].join('\n'),
+        );
+        const f = r.files[0]!;
+        expect(f.content).toBe(
+            [
+                '　地の文です。',   // 地の文 → 字下げ
+                '「会話文です」',   // 「 始まり → 下げない
+                '（補足です）',     // （ 始まり → 下げない
+                '『二重カギも』',   // 『 始まり → 下げない
+                '　……と口ごもった', // 記号（三点リーダー）始まりは地の文扱いで字下げ
+            ].join('\n'),
+        );
+    });
+
+    it('すでに全角スペースで始まる行は二重に字下げしない', () => {
+        const r = exportWeb(['＠章', '＠＠話', '　既に下がっている行'].join('\n'));
+        expect(r.files[0]!.content).toBe('　既に下がっている行');
+    });
+
+    it('箇条書き（・）と空行は字下げしない', () => {
+        const r = exportWeb(['＠章', '＠＠話', '・箇条書き', '', '地の文'].join('\n'));
+        expect(r.files[0]!.content).toBe('・箇条書き\n\n　地の文');
     });
 });

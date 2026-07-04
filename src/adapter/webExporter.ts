@@ -61,6 +61,23 @@ export function sanitizeName(raw: string, maxChars: number = MAX_NAME_CHARS): st
     return s;
 }
 
+// ---- 地の文の行頭字下げ ----------------------------------------------------
+
+// 行頭がこれらの文字なら字下げしない（開きカッコ類）。
+// すでに全角スペースで始まる行も二重字下げを避けるため対象に含める。
+const NO_INDENT_LEADS = new Set([
+    '「', '『', '（', '(', '〈', '《', '【', '〔', '［', '[', '｛', '{', '〝', '〘', '〖',
+    '　', // すでに全角スペースで始まる行
+]);
+
+// 地の文（会話・カッコ始まり以外）の行頭へ全角スペースを1つ入れる。
+function indentBody(line: string): string {
+    if (line === '') return line; // 空行はそのまま
+    const first = [...line][0];
+    if (first !== undefined && NO_INDENT_LEADS.has(first)) return line;
+    return '　' + line;
+}
+
 // ---- 本文の前後空行を落とす ------------------------------------------------
 
 function trimBlankEdges(lines: string[]): string[] {
@@ -136,7 +153,8 @@ export function exportWeb(text: string): WebExport {
                 break;
             case 'paragraph':
                 if (!sawHeading && titleFirstLine === null) titleFirstLine = node.text;
-                pushLine(renderInlineWeb(node.text));
+                // 会話・カッコ始まり以外の地の文は行頭を全角スペースで字下げする。
+                pushLine(indentBody(renderInlineWeb(node.text)));
                 break;
             case 'blank':
                 pushLine('');

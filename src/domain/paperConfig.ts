@@ -1,5 +1,8 @@
 export type PaperSize = 'a4' | 'a5' | 'a6' | 'b5';
 export type WritingMode = 'vertical' | 'horizontal';
+// 出力フォーマット。pdf は紙面固定（ノンブル・綴じ代・表紙テンプレートを伴う）、
+// epub は電子書籍向けリフロー（紙面まわりの装飾は付かない）。
+export type OutputFormat = 'pdf' | 'epub';
 
 export interface PaperConfig {
     paperSize:              PaperSize;
@@ -7,6 +10,8 @@ export interface PaperConfig {
     bodyPaperThicknessMm?:  number;
     coverPaperThicknessMm?: number;
     autoGenerate?:          string[];
+    // 生成するフォーマット。未指定なら pdf のみ（従来動作）。
+    formats?:               OutputFormat[];
 }
 
 export const defaultPaperConfig: PaperConfig = {

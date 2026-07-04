@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as path from "path";
 import { execSync } from "child_process";
-import { convertAtbToPdf } from "../usecase";
+import { convertAtb } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
 import { nodeFileReader, vivliostyleRunner, readPdfPageCount, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs, appendCharCount, readCountState, writeCountState } from "../infrastructure";
@@ -214,7 +214,7 @@ function toRepoRelativePath(p: string): string {
 
 async function runConvert(atbPath: string): Promise<void> {
     atbPath = toRepoRelativePath(atbPath);
-    const { pdfPath, pageCount, charCount, config } = await convertAtbToPdf(
+    const { pdfPath, epubPath, pageCount, charCount, config } = await convertAtb(
         {
             converter:    atbConverter,
             fileReader:   nodeFileReader,
@@ -223,7 +223,8 @@ async function runConvert(atbPath: string): Promise<void> {
         },
         { atbPath }
     );
-    console.log(`生成完了: ${pdfPath}`);
+    if (pdfPath)  console.log(`生成完了: ${pdfPath}`);
+    if (epubPath) console.log(`生成完了: ${epubPath}`);
     console.log(`  総文字数 : ${charCount.toLocaleString('ja-JP')}文字`);
 
     // 差分を算出してログに記録する。

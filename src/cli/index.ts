@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as path from "path";
 import { execSync } from "child_process";
-import { convertAtb } from "../usecase";
+import { convertAtb, convertAtbToWeb } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
 import { nodeFileReader, vivliostyleRunner, readPdfPageCount, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs, appendCharCount, readCountState, writeCountState } from "../infrastructure";
@@ -270,6 +270,23 @@ async function runConvert(atbPath: string): Promise<void> {
     }
 }
 
+// atb をウェブ投稿用テキストへ変換する。
+// 見出しで「作品フォルダ / 章フォルダ / 話ファイル(.txt)」に分割して出力する。
+async function runWeb(atbPath: string): Promise<void> {
+    atbPath = toRepoRelativePath(atbPath);
+    const outDir = path.join('dist', 'at-book', 'web');
+    const { bookDir, export: result, writtenPaths } = await convertAtbToWeb(
+        { fileReader: nodeFileReader, fileWriter: nodeFileWriter },
+        { atbPath, outDir },
+    );
+    console.log(`ウェブ投稿用に変換しました: ${bookDir}`);
+    console.log(`  作品フォルダ : ${result.folderName}`);
+    console.log(`  ファイル数   : ${writtenPaths.length}`);
+    for (const p of writtenPaths) {
+        console.log(`    - ${path.relative(bookDir, p)}`);
+    }
+}
+
 async function main(): Promise<void> {
     ensureHookInstalled();
 
@@ -288,6 +305,7 @@ async function main(): Promise<void> {
         }
         if (!hasAnyAutoGenerate) {
             console.error("使い方: at-book <file.atb>");
+            console.error("        at-book web <file.atb>");
             console.error("        at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]");
             process.exit(1);
         }
@@ -296,6 +314,13 @@ async function main(): Promise<void> {
 
     if (subcommand === "cover") {
         await runCover(rest);
+    } else if (subcommand === "web") {
+        const fileArg = rest.find(a => !a.startsWith("--"));
+        if (!fileArg) {
+            console.error("使い方: at-book web <file.atb>");
+            process.exit(1);
+        }
+        await runWeb(fileArg);
     } else if (subcommand === "count") {
         // --committed: コミット済み(HEAD)の内容を数える（post-commit フックが使用）。
         // フラグ無し（手動実行）は作業ツリーのローカル内容を数える。

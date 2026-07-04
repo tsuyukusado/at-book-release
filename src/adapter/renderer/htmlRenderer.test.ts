@@ -46,6 +46,22 @@ describe('インライン記法', () => {
         );
     });
 
+    it('圏点の拡大は PDF では transform:scale を使う', () => {
+        const out = render(parse('＠強調（・）'), horizontal, 'pdf');
+        expect(out).toContain('transform: scale(2.3);');
+        expect(out).not.toContain('font-size: 2.3em;');
+    });
+
+    it('圏点の拡大は EPUB では transform を使わず font-size で拡大する（リーダー非対応警告の回避）', () => {
+        const out = render(parse('＠強調（・）'), horizontal, 'epub');
+        expect(out).toContain('font-size: 2.3em;');
+        expect(out).not.toContain('transform: scale');
+    });
+
+    it('format 省略時は PDF 相当（transform:scale）になる', () => {
+        expect(render(parse('＠強調（・）'), horizontal)).toContain('transform: scale(2.3);');
+    });
+
     it('ダッシュ（＠ー）は全角ダッシュ(U+2015)2連、＠ーー は4連になる', () => {
         expect(html('闇＠ー', horizontal)).toContain('闇――');
         expect(html('＠ーー', horizontal)).toContain('――――');

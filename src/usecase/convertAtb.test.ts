@@ -50,10 +50,11 @@ describe('convertAtb のフォーマット振り分け', () => {
         expect(out.pageCount).toBe(42);
     });
 
-    it('HTML は 1 回だけ組んで各フォーマットに共有する', async () => {
-        let convertCount = 0;
+    it('HTML はフォーマットごとに組み、それぞれ対応する format 引数を渡す', async () => {
+        // 圏点の拡大手法など pdf/epub で CSS が異なるため、共有せずフォーマット別に変換する。
+        const formatsSeen: (string | undefined)[] = [];
         const deps = {
-            converter: { convert: () => { convertCount++; return '<html></html>'; } },
+            converter: { convert: (_t: string, _c: unknown, f?: 'pdf' | 'epub') => { formatsSeen.push(f); return '<html></html>'; } },
             fileReader: { read: async () => 'x' },
             configReader: { read: async () => ({ ...base, formats: ['pdf', 'epub'] as const }) },
             pdfRunner: {
@@ -62,7 +63,7 @@ describe('convertAtb のフォーマット振り分け', () => {
             },
         };
         await convertAtb(deps, { atbPath: 'doc/test.atb' });
-        expect(convertCount).toBe(1);
+        expect(formatsSeen).toEqual(['pdf', 'epub']);
     });
 
     it('formats:["web"] なら HTML を組まず pdf/epub も生成しない（web は CLI 側で出力）', async () => {

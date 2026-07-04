@@ -238,7 +238,7 @@ nav.atb-toc a.atb-toc-h2 {
 nav.atb-toc a::after {
   content: leader('—') target-counter(attr(href url), page);
   text-combine-upright: all;
-  -webkit-text-combine-upright: all;
+  -webkit-text-combine-upright: all;${format === 'epub' ? '\n  -epub-text-combine-upright: all;' : ''}
 }
 
 /* 箇条書き */
@@ -272,10 +272,11 @@ ruby.atb-kenten > rt > span {
   ${format === 'epub' ? 'font-size: 2.3em;' : 'transform: scale(2.3);'}
 }
 
-/* 縦中横 */
+/* 縦中横。無印 text-combine-upright を尊重しないリーダー（Apple Books ほか）向けに
+   EPUB だけ -epub- 版も併記する。これが無いと ！？ が縦中横にならず倒れてしまう。 */
 .atb-tcy {
   text-combine-upright: all;
-  -webkit-text-combine-upright: all;
+  -webkit-text-combine-upright: all;${format === 'epub' ? '\n  -epub-text-combine-upright: all;' : ''}
 }
 
 /* コロフォン: 流れからは外し、最終ページのフッター中央にのみ出す。

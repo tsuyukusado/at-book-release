@@ -6,6 +6,8 @@ export interface AtbConverter {
     // format は HTML/CSS の出力先（'pdf' | 'epub'）。省略時は 'pdf'。
     // 圏点の拡大手法など、リーダー対応の都合で pdf と epub で CSS を出し分けるために使う。
     convert(atbText: string, config: PaperConfig, format?: 'pdf' | 'epub'): string;
+    // EPUB は改ページ境界で spine（XHTML 文書）を分割する。分割済みの HTML 文書列を返す。
+    convertEpubSections(atbText: string, config: PaperConfig): string[];
 }
 
 export interface FileReader {
@@ -16,7 +18,8 @@ export interface HtmlToPdfRunner {
     // 紙面固定の PDF を組む。実際に組版しないと分からないページ数を返す。
     compile(htmlContent: string, outputPath: string): Promise<{ pageCount: number }>;
     // 電子書籍向けの epub を書き出す。リフローするためページ数の概念は無い。
-    compileEpub(htmlContent: string, outputPath: string): Promise<void>;
+    // sections は改ページ境界で分割済みの HTML 文書列で、各要素が 1 つの spine になる。
+    compileEpub(sections: string[], outputPath: string): Promise<void>;
 }
 
 export interface ConfigReader {
@@ -68,8 +71,9 @@ export async function convertAtb(
     }
     if (formats.includes('epub')) {
         epubPath = path.join(outDir, `${base}.epub`);
-        const html = deps.converter.convert(atbText, config, 'epub');
-        await deps.pdfRunner.compileEpub(html, epubPath);
+        // 改ページ境界で分割した spine 文書列を組み、複数 XHTML の EPUB として書き出す。
+        const sections = deps.converter.convertEpubSections(atbText, config);
+        await deps.pdfRunner.compileEpub(sections, epubPath);
     }
 
     const charCount = countChars(atbText);

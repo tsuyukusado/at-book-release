@@ -298,9 +298,22 @@ interface HeadingMeta {
 
 const COLOPHON = 'Created with at-book. Copyright © 2026 tsuyukusado. MIT License.';
 
-export function render(nodes: ParsedNode[], config: PaperConfig, format: 'pdf' | 'epub' = 'pdf'): string {
-    const isVertical = config.writingMode === 'vertical';
+// 本文を組み立てる最小単位。EPUB では改ページ境界で spine（XHTML）を分割するため、
+// 各ブロックが「直前で改ページするか（breakBefore）」「直後で改ページするか（breakAfter）」
+// を持つ。pageBreakOnly は ＠＠＠（中身の無い純粋な改ページ）で、EPUB では HTML を捨てて
+// 分割の合図だけに使う（PDF では atb-pagebreak の div をそのまま流し込む）。
+interface Block {
+    html: string;
+    breakBefore?: boolean;
+    breakAfter?: boolean;
+    pageBreakOnly?: boolean;
+}
 
+// 見出しの番号付けと目次項目の収集（PDF・EPUB 共通の事前パス）。
+function computeHeadingMeta(
+    nodes: ParsedNode[],
+    isVertical: boolean,
+): { headingMeta: Map<number, HeadingMeta>; tocEntries: HeadingMeta[] } {
     // 事前スキャン: 番号の要否を決めるために、大見出しの総数と、各小見出しが
     // 属する兄弟グループ（直前の大見出し配下）のサイズを求める。
     //   - 大見出しが唯一 → 大見出しは番号なし。小見出しは同じ親配下に複数あるときだけ
@@ -371,28 +384,38 @@ export function render(nodes: ParsedNode[], config: PaperConfig, format: 'pdf' |
         }
     });
 
-    // 第2パス: 本文 HTML を組み立てる。
-    const body: string[] = [];
+    return { headingMeta, tocEntries };
+}
+
+// 本文をブロック列に組み立てる（PDF・EPUB 共通）。改ページ属性を各ブロックに持たせ、
+// PDF は html を素直に連結、EPUB は breakBefore/breakAfter で spine を分割する。
+function buildBlocks(
+    nodes: ParsedNode[],
+    isVertical: boolean,
+    headingMeta: Map<number, HeadingMeta>,
+    tocEntries: HeadingMeta[],
+): Block[] {
+    const blocks: Block[] = [];
     let listDepth = 0;
 
     const closeLists = () => {
         while (listDepth > 0) {
             listDepth--;
-            body.push('</ul>');
+            blocks.push({ html: '</ul>' });
         }
     };
 
     nodes.forEach((node, i) => {
         if (node.kind === 'listItem') {
             while (listDepth < node.level) {
-                body.push('<ul class="atb-list">');
+                blocks.push({ html: '<ul class="atb-list">' });
                 listDepth++;
             }
             while (listDepth > node.level) {
                 listDepth--;
-                body.push('</ul>');
+                blocks.push({ html: '</ul>' });
             }
-            body.push(`<li>${renderInline(node.text, isVertical)}</li>`);
+            blocks.push({ html: `<li>${renderInline(node.text, isVertical)}</li>` });
             return;
         }
 
@@ -402,9 +425,10 @@ export function render(nodes: ParsedNode[], config: PaperConfig, format: 'pdf' |
             case 'heading': {
                 const meta = headingMeta.get(i)!;
                 if (meta.level === 1) {
-                    body.push(`<h1 class="atb-h1" id="${meta.id}">${meta.titleHtml}</h1>`);
+                    // 大見出しは改ページして始まる（EPUB では章ごとに spine 分割）。
+                    blocks.push({ html: `<h1 class="atb-h1" id="${meta.id}">${meta.titleHtml}</h1>`, breakBefore: true });
                 } else {
-                    body.push(`<h2 class="atb-h2" id="${meta.id}">${meta.titleHtml}</h2>`);
+                    blocks.push({ html: `<h2 class="atb-h2" id="${meta.id}">${meta.titleHtml}</h2>` });
                 }
                 break;
             }
@@ -415,32 +439,36 @@ export function render(nodes: ParsedNode[], config: PaperConfig, format: 'pdf' |
                 const entries = tocEntries
                     .map(e => `<a class="atb-toc-${e.level === 1 ? 'h1' : 'h2'}" href="#${e.id}">${e.titleHtml}</a>`)
                     .join('\n');
-                body.push(`<nav class="atb-toc"><div class="atb-toc-title">目次</div>\n${entries}\n</nav>`);
+                // 目次は前後で改ページ（EPUB では単独の spine 文書になる）。
+                blocks.push({ html: `<nav class="atb-toc"><div class="atb-toc-title">目次</div>\n${entries}\n</nav>`, breakBefore: true, breakAfter: true });
                 break;
             }
             case 'paragraph': {
                 // 行頭が始め括弧（「『）の段落は字下げ（天付き）にしない。
                 const noIndent = /^[「『]/.test(node.text);
                 const cls = noIndent ? 'atb-p atb-p-noindent' : 'atb-p';
-                body.push(`<p class="${cls}">${renderInline(node.text, isVertical)}</p>`);
+                blocks.push({ html: `<p class="${cls}">${renderInline(node.text, isVertical)}</p>` });
                 break;
             }
             case 'blank':
-                body.push('<div class="atb-blank"></div>');
+                blocks.push({ html: '<div class="atb-blank"></div>' });
                 break;
             case 'pageBreak':
-                body.push('<div class="atb-pagebreak"></div>');
+                // ＠＠＠。PDF は break-before:page の div、EPUB は spine 分割の合図。
+                blocks.push({ html: '<div class="atb-pagebreak"></div>', breakBefore: true, pageBreakOnly: true });
                 break;
         }
     });
 
     closeLists();
 
-    // コロフォンは流れの最後に置く（最終ページのフッターに実行組版される）。
-    body.push(`<div class="atb-colophon">${escapeHtml(COLOPHON)}</div>`);
+    return blocks;
+}
 
-    const css = buildCss(config, format);
+const COLOPHON_HTML = `<div class="atb-colophon">${escapeHtml(COLOPHON)}</div>`;
 
+// 完全な HTML 文書の外枠。PDF は 1 文書、EPUB は spine ごとに同じ外枠で包む。
+function wrapDocument(bodyHtml: string, css: string): string {
     return `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -451,8 +479,60 @@ ${css}
 </style>
 </head>
 <body>
-${body.join('\n')}
+${bodyHtml}
 </body>
 </html>
 `;
+}
+
+// PDF 用（紙面固定）。全ブロックを 1 文書に連結する。改ページは CSS（break-before:page）が担う。
+export function render(nodes: ParsedNode[], config: PaperConfig, format: 'pdf' | 'epub' = 'pdf'): string {
+    const isVertical = config.writingMode === 'vertical';
+    const { headingMeta, tocEntries } = computeHeadingMeta(nodes, isVertical);
+    const blocks = buildBlocks(nodes, isVertical, headingMeta, tocEntries);
+
+    const body = blocks.map(b => b.html);
+    // コロフォンは流れの最後に置く（最終ページのフッターに実行組版される）。
+    body.push(COLOPHON_HTML);
+
+    return wrapDocument(body.join('\n'), buildCss(config, format));
+}
+
+// EPUB 用（リフロー）。改ページ境界で spine（XHTML 文書）を分割して返す。
+// リフロー型 EPUB リーダーは CSS の break-before:page を尊重しないため、改ページは
+// 「新しい spine 文書は必ず新しいページから始まる」という EPUB の性質で実現する。
+export function renderSections(nodes: ParsedNode[], config: PaperConfig): string[] {
+    const isVertical = config.writingMode === 'vertical';
+    const { headingMeta, tocEntries } = computeHeadingMeta(nodes, isVertical);
+    const blocks = buildBlocks(nodes, isVertical, headingMeta, tocEntries);
+    const css = buildCss(config, 'epub');
+
+    // ブロック列を改ページ境界でセクション（＝spine 文書）に切り分ける。
+    const sections: string[][] = [];
+    let current: string[] = [];
+    let pendingBreak = false;
+    const flush = () => {
+        if (current.length > 0) {
+            sections.push(current);
+            current = [];
+        }
+    };
+    for (const b of blocks) {
+        // ＠＠＠ は中身を持たず、次の内容を新しい spine へ送るだけ。
+        if (b.pageBreakOnly) {
+            pendingBreak = true;
+            continue;
+        }
+        if ((b.breakBefore || pendingBreak) && current.length > 0) flush();
+        pendingBreak = false;
+        current.push(b.html);
+        if (b.breakAfter) flush();
+    }
+    flush();
+
+    // コロフォンは最後の spine 文書の流れの末尾へ。1 文書も無ければ 1 つ作る。
+    if (sections.length === 0) sections.push([]);
+    sections[sections.length - 1]!.push(COLOPHON_HTML);
+
+    return sections.map(frags => wrapDocument(frags.join('\n'), css));
 }

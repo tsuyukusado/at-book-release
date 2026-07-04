@@ -117,24 +117,25 @@ function resolveVivliostyleBin(): string {
     return 'vivliostyle';
 }
 
-// HTML を Vivliostyle で組んで指定フォーマットの成果物を書き出す共通処理。
-// フォント同梱・fontconfig・ブラウザ解決は pdf/epub で共通なのでここに集約する。
-// format はサイドカーの拡張子（'pdf' | 'epub'）で、'epub' のときのみ `-f epub` を渡す
-// （pdf は拡張子から自動推論されるので明示不要）。
-async function runBuild(htmlContent: string, outputPath: string, format: 'pdf' | 'epub'): Promise<void> {
-    const dir      = path.dirname(outputPath);
-    const base     = path.basename(outputPath, `.${format}`);
-    const htmlPath = path.join(dir, `${base}.html`);
-
-    const absDir      = path.resolve(dir);
-    const absHtmlPath = path.resolve(htmlPath);
-    const absOutPath  = path.resolve(outputPath);
-
+// ビルド用ディレクトリを用意する（フォント同梱・fontconfig 生成）。pdf/epub 共通。
+// 返り値は生成した fontconfig 設定のパス（Chrome for Testing 使用時のみ使う）。
+async function prepareBuildDir(absDir: string): Promise<string> {
     await mkdir(absDir, { recursive: true });
     await copyFonts(absDir);
-    const fontconfigFile = await writeFontconfig(absDir);
-    await writeFile(absHtmlPath, htmlContent, 'utf-8');
+    return writeFontconfig(absDir);
+}
 
+// vivliostyle CLI を起動して成果物を 1 つ書き出す共通処理。
+// inputArgs は組版対象の指定（PDF は HTML ファイルのパス、EPUB は entry 配列を持つ設定
+// ファイルを `-c <path>` で指定）。'epub' のときのみ `-f epub` を渡す
+// （pdf は拡張子から自動推論されるので明示不要）。
+async function runVivliostyle(
+    inputArgs: string[],
+    absOutPath: string,
+    absDir: string,
+    fontconfigFile: string,
+    format: 'pdf' | 'epub',
+): Promise<void> {
     const bin = resolveVivliostyleBin();
     const isJs = bin.endsWith('.js') || bin.endsWith('.cjs') || bin.endsWith('.mjs');
     const cmd  = isJs ? process.execPath : bin;
@@ -144,7 +145,7 @@ async function runBuild(htmlContent: string, outputPath: string, format: 'pdf' |
     const args = [
         ...(isJs ? [bin] : []),
         'build',
-        absHtmlPath,
+        ...inputArgs,
         '-o', absOutPath,
         ...(format === 'epub' ? ['-f', 'epub'] : []),
         '--timeout', '300',
@@ -154,13 +155,52 @@ async function runBuild(htmlContent: string, outputPath: string, format: 'pdf' |
     await spawnAsync(cmd, args, absDir, browserEnv(browser, fontconfigFile));
 }
 
+// 紙面固定の PDF を組む。単一 HTML をそのまま Vivliostyle に渡す。
+async function runPdfBuild(htmlContent: string, outputPath: string): Promise<void> {
+    const dir      = path.dirname(outputPath);
+    const base     = path.basename(outputPath, '.pdf');
+    const absDir      = path.resolve(dir);
+    const absHtmlPath = path.resolve(path.join(dir, `${base}.html`));
+    const absOutPath  = path.resolve(outputPath);
+
+    const fontconfigFile = await prepareBuildDir(absDir);
+    await writeFile(absHtmlPath, htmlContent, 'utf-8');
+
+    await runVivliostyle([absHtmlPath], absOutPath, absDir, fontconfigFile, 'pdf');
+}
+
+// リフロー型 EPUB を組む。改ページ境界で分割済みの各セクションを個別の HTML ファイルに
+// 書き出し、vivliostyle.config.js の entry 配列へ並べる。Vivliostyle は entry 1 つにつき
+// spine（XHTML）を 1 つ生成するので、これで改ページ境界ごとに独立した spine 文書となり、
+// リーダー上で確実に改ページされる（CSS の break-before:page はリフローでは無視されるため）。
+async function runEpubBuild(sections: string[], outputPath: string): Promise<void> {
+    const dir  = path.dirname(outputPath);
+    const base = path.basename(outputPath, '.epub');
+    const absDir     = path.resolve(dir);
+    const absOutPath = path.resolve(outputPath);
+
+    const fontconfigFile = await prepareBuildDir(absDir);
+
+    // 1 セクション = 1 HTML ファイル = 1 spine。名前は spine の順序どおりゼロ埋め連番にする。
+    const entryFiles = sections.map((_, i) => `${base}-${String(i + 1).padStart(3, '0')}.html`);
+    await Promise.all(sections.map((html, i) =>
+        writeFile(path.join(absDir, entryFiles[i]!), html, 'utf-8')));
+
+    // 設定ファイルは独自名なので位置引数だと入力形式を推定できない。`-c` で明示指定する。
+    const configPath = path.join(absDir, `${base}.vivliostyle.config.js`);
+    const configBody = { title: 'at-book', language: 'ja', entry: entryFiles };
+    await writeFile(configPath, `module.exports = ${JSON.stringify(configBody, null, 2)};\n`, 'utf-8');
+
+    await runVivliostyle(['-c', path.resolve(configPath)], absOutPath, absDir, fontconfigFile, 'epub');
+}
+
 export const vivliostyleRunner: HtmlToPdfRunner = {
     async compile(htmlContent: string, outputPath: string): Promise<{ pageCount: number }> {
-        await runBuild(htmlContent, outputPath, 'pdf');
+        await runPdfBuild(htmlContent, outputPath);
         const pageCount = (await readPdfPageCount(path.resolve(outputPath))) ?? 0;
         return { pageCount };
     },
-    async compileEpub(htmlContent: string, outputPath: string): Promise<void> {
-        await runBuild(htmlContent, outputPath, 'epub');
+    async compileEpub(sections: string[], outputPath: string): Promise<void> {
+        await runEpubBuild(sections, outputPath);
     }
 };

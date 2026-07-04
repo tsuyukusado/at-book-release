@@ -68,43 +68,59 @@ describe('exportWeb（章/話への分割）', () => {
         expect(result.folderName).toBe('ぼくのちい');
     });
 
-    it('レベル1見出しは章フォルダ、レベル2見出しは話ファイルになる', () => {
-        const map = Object.fromEntries(
-            result.files.map(f => [[...f.dir, f.name].join('/'), f.content]),
-        );
-        expect(Object.keys(map).sort()).toEqual(
-            ['第一章/出会い', '第一章/別れ', '第一章/第一章'].sort(),
+    it('章フォルダ・話ファイル名の先頭に連番が付く（01_タイトル）', () => {
+        const paths = result.files.map(f => [...f.dir, f.name].join('/')).sort();
+        expect(paths).toEqual(
+            ['01_第一章/01_第一章', '01_第一章/02_出会い', '01_第一章/03_別れ'].sort(),
         );
     });
 
-    it('章直下（小見出し前）の本文は章見出し名のファイルになる', () => {
-        const f = result.files.find(f => f.name === '第一章');
-        expect(f?.dir).toEqual(['第一章']);
+    it('章直下（小見出し前）の本文は章見出し名のファイル（話番号01）になる', () => {
+        const f = result.files.find(f => f.name.endsWith('_第一章'));
+        expect(f?.dir).toEqual(['01_第一章']);
+        expect(f?.name).toBe('01_第一章');
         expect(f?.content).toBe('章の導入本文。');
     });
 
     it('話ファイルの本文はウェブ記法に変換される', () => {
-        const f = result.files.find(f => f.name === '出会い');
+        const f = result.files.find(f => f.name.endsWith('_出会い'));
         expect(f?.content).toBe('「｜彼女《かのじょ》は笑った」\n本文――');
     });
 
     it('目次はまるごと消え、改ページは改行になる', () => {
-        const f = result.files.find(f => f.name === '別れ');
+        const f = result.files.find(f => f.name.endsWith('_別れ'));
         expect(f?.content).toBe('点｜文《﹅》｜字《﹅》を打つ\n\n続き');
     });
 
-    it('見出しが無ければ全文を1ファイルにする', () => {
+    it('話番号は章ごとに 01 からリセットし、章番号は作品を通して振る', () => {
+        const r = exportWeb(
+            ['＠第一章', '＠＠A', 'あ', '＠＠B', 'い', '＠第二章', '＠＠C', 'う'].join('\n'),
+        );
+        const paths = r.files.map(f => [...f.dir, f.name].join('/')).sort();
+        expect(paths).toEqual(
+            ['01_第一章/01_A', '01_第一章/02_B', '02_第二章/01_C'].sort(),
+        );
+    });
+
+    it('件数が10以上ならゼロ埋め桁数が自動で増える', () => {
+        const lines: string[] = ['＠章'];
+        for (let i = 1; i <= 10; i++) lines.push(`＠＠話${i}`, `本文${i}`);
+        const r = exportWeb(lines.join('\n'));
+        expect(r.files.map(f => f.name)).toContain('01_話1');
+        expect(r.files.map(f => f.name)).toContain('10_話10');
+    });
+
+    it('見出しが無ければ全文を1ファイル（話番号01）にする', () => {
         const r = exportWeb('ただの文章\nもう一行');
         expect(r.folderName).toBe('ただの文章');
         expect(r.files).toEqual([
-            { dir: [], name: 'ただの文章', content: 'ただの文章\nもう一行' },
+            { dir: [], name: '01_ただの文章', content: 'ただの文章\nもう一行' },
         ]);
     });
 
-    it('同じ見出しが重なると連番でファイル名の衝突を避ける', () => {
+    it('同じ見出しが重なっても話番号が異なるので名前が衝突しない', () => {
         const r = exportWeb(['＠章', '＠＠同話', 'あ', '＠＠同話', 'い'].join('\n'));
-        const names = r.files.map(f => f.name);
-        expect(names).toContain('同話');
-        expect(names).toContain('同話-2');
+        const names = r.files.map(f => f.name).sort();
+        expect(names).toEqual(['01_同話', '02_同話']);
     });
 });

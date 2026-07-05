@@ -6,6 +6,7 @@ import * as path from "path";
 import { PDFDocument } from "pdf-lib";
 import type { HtmlToPdfRunner } from "../usecase";
 import type { EpubSection } from "../domain";
+import { injectPrimaryWritingMode } from "./epubPostProcess";
 
 function spawnAsync(cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -179,7 +180,7 @@ async function runPdfBuild(htmlContent: string, outputPath: string): Promise<voi
 // （dist/at-book）で直接組むと、PDF 用 HTML（transform:scale を含む）や過去ビルドの残骸まで
 // manifest に混入し、リーダーが未対応スタイル警告を出す。これを避けるため、セクション・設定・
 // フォントだけを置いた専用の隔離ディレクトリで組み、終わったら片付ける。
-async function runEpubBuild(sections: EpubSection[], outputPath: string, readingProgression: 'ltr' | 'rtl'): Promise<void> {
+async function runEpubBuild(sections: EpubSection[], outputPath: string, readingProgression: 'ltr' | 'rtl', primaryWritingMode?: 'vertical-rl' | 'horizontal-tb'): Promise<void> {
     const base       = path.basename(outputPath, '.epub');
     const absOutPath = path.resolve(outputPath);
     const buildDir   = path.join(path.resolve(path.dirname(outputPath)), `.epub-build-${base}`);
@@ -204,6 +205,10 @@ async function runEpubBuild(sections: EpubSection[], outputPath: string, reading
     } finally {
         await rm(buildDir, { recursive: true, force: true });
     }
+
+    // Vivliostyle は Amazon 独自の primary-writing-mode メタを出力しない。縦組みのときは
+    // これが無いと Kindle の縦中横エンジンが起動しないため、生成後に OPF へ注入する。
+    if (primaryWritingMode) await injectPrimaryWritingMode(absOutPath, primaryWritingMode);
 }
 
 export const vivliostyleRunner: HtmlToPdfRunner = {
@@ -212,7 +217,7 @@ export const vivliostyleRunner: HtmlToPdfRunner = {
         const pageCount = (await readPdfPageCount(path.resolve(outputPath))) ?? 0;
         return { pageCount };
     },
-    async compileEpub(sections: EpubSection[], outputPath: string, readingProgression: 'ltr' | 'rtl'): Promise<void> {
-        await runEpubBuild(sections, outputPath, readingProgression);
+    async compileEpub(sections: EpubSection[], outputPath: string, readingProgression: 'ltr' | 'rtl', primaryWritingMode?: 'vertical-rl' | 'horizontal-tb'): Promise<void> {
+        await runEpubBuild(sections, outputPath, readingProgression, primaryWritingMode);
     }
 };

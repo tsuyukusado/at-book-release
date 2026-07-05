@@ -5,7 +5,7 @@ import type { PaperConfig } from '../domain';
 
 // 呼び出し記録つきのスタブ群。vivliostyle を実際に起動せずフォーマット振り分けを検証する。
 function makeDeps(config: PaperConfig) {
-    const calls: { pdf: string[]; epub: string[] } = { pdf: [], epub: [] };
+    const calls: { pdf: string[]; epub: string[]; epubDir: ('ltr' | 'rtl')[] } = { pdf: [], epub: [], epubDir: [] };
     const converter: AtbConverter = {
         convert: () => '<html>組んだHTML</html>',
         convertEpubSections: () => [
@@ -17,7 +17,7 @@ function makeDeps(config: PaperConfig) {
     const configReader: ConfigReader = { read: async () => config };
     const pdfRunner: HtmlToPdfRunner = {
         async compile(_html, out) { calls.pdf.push(out); return { pageCount: 42 }; },
-        async compileEpub(_sections, out) { calls.epub.push(out); },
+        async compileEpub(_sections, out, dir) { calls.epub.push(out); calls.epubDir.push(dir); },
     };
     return { deps: { converter, fileReader, pdfRunner, configReader }, calls };
 }
@@ -54,6 +54,16 @@ describe('convertAtb のフォーマット振り分け', () => {
         expect(out.pdfPath).toBe('dist/at-book/test-honbun.pdf');
         expect(out.epubPath).toBe('dist/at-book/test.epub');
         expect(out.pageCount).toBe(42);
+    });
+
+    it('epub のページ送り方向は組み方向に従う（縦書き=rtl・横書き=ltr）', async () => {
+        const v = makeDeps({ ...base, writingMode: 'vertical', formats: ['epub'] });
+        await convertAtb(v.deps, { atbPath: 'doc/test.atb' });
+        expect(v.calls.epubDir).toEqual(['rtl']);
+
+        const h = makeDeps({ ...base, writingMode: 'horizontal', formats: ['epub'] });
+        await convertAtb(h.deps, { atbPath: 'doc/test.atb' });
+        expect(h.calls.epubDir).toEqual(['ltr']);
     });
 
     it('pdf は convert(format=pdf)、epub は convertEpubSections で別々に組む', async () => {

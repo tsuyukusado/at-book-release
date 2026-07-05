@@ -33,10 +33,14 @@ function renderInlineNode(node: InlineNode, isVertical: boolean): string {
             // ・・ → 三点リーダー。level は元の中黒の数。
             return escapeHtml('…'.repeat(node.level));
         case 'tatechuyoko':
-            // 縦書き時のみ縦中横。横書きは素通し。
-            return isVertical
-                ? `<span class="atb-tcy">${escapeHtml(node.text.replace(/！/g, '!').replace(/？/g, '?'))}</span>`
-                : escapeHtml(node.text);
+            // 横書きは素通し。縦書きは縦中横にする。
+            if (!isVertical) return escapeHtml(node.text);
+            // 半角化して text-combine-upright の span で横並び正立させる（.atb-tcy の CSS 参照）。
+            // かつて ！？→⁉ 等の合成済み文字（Vertical_Orientation=U）に置換していたが、Kindle の
+            // 変換器（Send to Kindle の KFX 化）は vo=U を無視して単独グリフを回してしまい倒れる。
+            // Amazon が縦中横として解釈するのは半角＋text-combine の系統だけなので、そちらに一本化。
+            // これは OPF の primary-writing-mode: vertical-rl（縦組み判定）と噛み合って初めて効く。
+            return `<span class="atb-tcy">${escapeHtml(node.text.replace(/！/g, '!').replace(/？/g, '?'))}</span>`;
     }
 }
 
@@ -123,6 +127,24 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
     //   本文サイズ（9pt）を引き継いでしまうため。ここを取り違えると縮小が無視される。
     const colophonFontPt = fitColophonFontPt(widthMm - inner - outer);
 
+    // 縦中横の宣言群。認識する構文がリーダーごとに違うため、EPUB では標準・WebKit(新)・
+    // EPUB3・レガシー(旧 WebKit) の全構文を併記して広く網を張る。Kindle など旧エンジンは
+    // 標準の text-combine-upright を無視し、レガシーの -webkit-text-combine: horizontal
+    // だけを解釈することがあり、これが無いと ！？ が縦中横にならず倒れる。
+    // PDF(Vivliostyle) は標準構文で足りるので併記しない。
+    const tcyDecls = format === 'epub'
+        ? [
+            'text-combine-upright: all;',
+            '-webkit-text-combine-upright: all;',
+            '-epub-text-combine-upright: all;',
+            '-webkit-text-combine: horizontal;',
+            'text-combine: horizontal;',
+          ].join('\n  ')
+        : [
+            'text-combine-upright: all;',
+            '-webkit-text-combine-upright: all;',
+          ].join('\n  ');
+
     return `
 @page {
   size: ${widthMm}mm ${heightMm}mm;
@@ -160,7 +182,7 @@ html {
   font-family: "Shippori Mincho", serif;
   font-size: 9pt;
   line-height: 1.75;
-  ${isVertical ? 'writing-mode: vertical-rl;' : ''}
+  ${isVertical ? (format === 'epub' ? '-epub-writing-mode: vertical-rl;\n  writing-mode: vertical-rl;' : 'writing-mode: vertical-rl;') : ''}
   text-align: justify;
   text-justify: inter-character;
   line-break: strict;
@@ -183,7 +205,10 @@ p.atb-p-noindent {
   text-indent: 0;
 }
 
-/* 空行: 1行分のアキ (本文の line-height 1.75 に合わせる) */
+/* 空行: 1行分のアキ (本文の line-height 1.75 に合わせる)。
+   中身は &#160;（不可視スペース）を入れて実体のある行ボックスを持たせる。
+   リフロー型 EPUB リーダーは中身の無い空ブロックを潰して block-size を無視する
+   ことが多く、空行が消えてしまうため。PDF は 1 行の内容が block-size に収まり見た目不変。 */
 .atb-blank {
   block-size: 1.75em;
 }
@@ -234,8 +259,7 @@ nav.atb-toc a.atb-toc-h2 {
    させる（横書きでは無効果）。 */
 nav.atb-toc a::after {
   content: leader('—') target-counter(attr(href url), page);
-  text-combine-upright: all;
-  -webkit-text-combine-upright: all;
+  ${tcyDecls}
 }
 
 /* 箇条書き */
@@ -269,10 +293,10 @@ ruby.atb-kenten > rt > span {
   ${format === 'epub' ? 'font-size: 2.3em;' : 'transform: scale(2.3);'}
 }
 
-/* 縦中横 */
+/* 縦中横。認識する構文がリーダーごとに違うため、EPUB では全構文を併記する（tcyDecls）。
+   これが無い／標準構文しか無いと、Kindle 等では ！？ が縦中横にならず倒れてしまう。 */
 .atb-tcy {
-  text-combine-upright: all;
-  -webkit-text-combine-upright: all;
+  ${tcyDecls}
 }
 
 /* コロフォン: 流れからは外し、最終ページのフッター中央にのみ出す。
@@ -456,7 +480,9 @@ function buildBlocks(
                 break;
             }
             case 'blank':
-                blocks.push({ html: '<div class="atb-blank"></div>' });
+                // 中身の &#160; は必須。空の <div> だとリフロー型 EPUB リーダーが
+                // 潰して空行が消えるため、実体のある行ボックスを持たせる。
+                blocks.push({ html: '<div class="atb-blank">&#160;</div>' });
                 break;
             case 'pageBreak':
                 // ＠＠＠。PDF は break-before:page の div、EPUB は spine 分割の合図。

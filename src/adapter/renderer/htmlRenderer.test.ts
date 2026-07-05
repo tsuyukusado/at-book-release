@@ -83,10 +83,22 @@ describe('インライン記法', () => {
         expect(html('そう・・', horizontal)).toContain('そう……');
     });
 
-    it('縦中横（！？の2連以上）は縦書きでは半角化して span、横書きでは素通し', () => {
+    it('縦中横は縦書きでは半角化した text-combine の span、横書きでは素通し', () => {
+        // ！？ 等は半角 !? へ直して .atb-tcy span で横並び正立させる。合成済み文字 ⁉ 等は
+        // Kindle の変換器が vo=U を無視して倒すため使わない（primary-writing-mode と噛み合う CSS 経路に統一）。
         expect(html('本当に！？', vertical)).toContain('<span class="atb-tcy">!?</span>');
-        expect(html('本当に！？', horizontal)).not.toContain('<span class="atb-tcy">');
+        expect(html('えっ！！', vertical)).toContain('<span class="atb-tcy">!!</span>');
+        expect(html('なぜ？？', vertical)).toContain('<span class="atb-tcy">??</span>');
+        expect(html('何？！', vertical)).toContain('<span class="atb-tcy">?!</span>');
+        // 合成済み文字には置換しない。
+        expect(html('本当に！？', vertical)).not.toContain('⁉');
+        // 横書きは縦中横にせず素通し。
         expect(html('本当に！？', horizontal)).toContain('<p class="atb-p">本当に！？</p>');
+        expect(html('本当に！？', horizontal)).not.toContain('<span class="atb-tcy">');
+    });
+
+    it('縦中横の3文字以上も半角化して span', () => {
+        expect(html('うおお！？！', vertical)).toContain('<span class="atb-tcy">!?!</span>');
     });
 
     it('HTML特殊文字はエスケープされる', () => {
@@ -197,8 +209,8 @@ describe('ブロック要素', () => {
         expect(out.match(/<ul class="atb-list">/g)?.length).toBe(2);
     });
 
-    it('空行は atb-blank になる', () => {
-        expect(html('文\n\n文', horizontal)).toContain('<div class="atb-blank"></div>');
+    it('空行は atb-blank になり、中身に &#160; を持つ（EPUB で空ブロックが潰れて消えないように）', () => {
+        expect(html('文\n\n文', horizontal)).toContain('<div class="atb-blank">&#160;</div>');
     });
 
     it('＠＠＠ は改ページになる', () => {
@@ -210,6 +222,34 @@ describe('ページ設定 CSS', () => {
     it('縦書きは vertical-rl を含み、横書きは含まない', () => {
         expect(html('文', vertical)).toContain('writing-mode: vertical-rl;');
         expect(html('文', horizontal)).not.toContain('writing-mode: vertical-rl;');
+    });
+
+    it('縦書き EPUB は互換用の -epub-writing-mode も出す（PDF では出さない）', () => {
+        // 無印 writing-mode を尊重しないリーダー向けに EPUB だけ -epub- 版を併記する。
+        const epub = render(parse('文'), vertical, 'epub');
+        expect(epub).toContain('-epub-writing-mode: vertical-rl;');
+        expect(epub).toContain('writing-mode: vertical-rl;');
+        const pdf = render(parse('文'), vertical, 'pdf');
+        expect(pdf).not.toContain('-epub-writing-mode');
+        expect(pdf).toContain('writing-mode: vertical-rl;');
+        // 横書き EPUB には縦書き指定は入らない。
+        expect(render(parse('文'), horizontal, 'epub')).not.toContain('-epub-writing-mode');
+    });
+
+    it('縦中横は EPUB では全構文（標準・-epub-・レガシー）を併記する（PDF では標準のみ）', () => {
+        // 認識する構文がリーダーごとに違う。Kindle 等は標準の text-combine-upright を無視し
+        // レガシーの -webkit-text-combine: horizontal だけを解釈するため、これが無いと
+        // ！？ が縦中横にならず倒れてしまう。EPUB は全構文を併記して広く網を張る。
+        const epub = render(parse('本当に！？'), vertical, 'epub');
+        expect(epub).toContain('text-combine-upright: all;');
+        expect(epub).toContain('-epub-text-combine-upright: all;');
+        expect(epub).toContain('-webkit-text-combine: horizontal;');
+        expect(epub).toContain('text-combine: horizontal;');
+        // PDF(Vivliostyle) は標準構文で足りるので EPUB 専用の互換構文は出さない。
+        const pdf = render(parse('本当に！？'), vertical, 'pdf');
+        expect(pdf).toContain('text-combine-upright: all;');
+        expect(pdf).not.toContain('-epub-text-combine-upright');
+        expect(pdf).not.toContain('text-combine: horizontal;');
     });
 
     it('用紙サイズが @page size に反映される（a6 = 105mm 148mm）', () => {
@@ -271,6 +311,11 @@ describe('EPUB の spine 分割（renderSections）', () => {
         expect(s).toHaveLength(1);
         expect(bodyOf(s[0]!)).toContain('ひとつめ');
         expect(bodyOf(s[0]!)).toContain('ふたつめ');
+    });
+
+    it('EPUB の空行 div は中身に &#160; を持ち、空ブロックで潰れて消えないようにする', () => {
+        const s = sections('前\n\n後');
+        expect(bodyOf(s[0]!)).toContain('<div class="atb-blank">&#160;</div>');
     });
 
     it('各セクションは完全な HTML 文書になる', () => {

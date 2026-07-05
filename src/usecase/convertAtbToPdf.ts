@@ -21,7 +21,9 @@ export interface HtmlToPdfRunner {
     // sections は改ページ境界で分割済みの spine 文書群（ファイル名付き）。各要素が 1 spine になる。
     // readingProgression はページ送りの向き（縦書き=rtl・横書き=ltr）。spine の
     // page-progression-direction になり、リーダーのスクロール／ページめくり方向を決める。
-    compileEpub(sections: EpubSection[], outputPath: string, readingProgression: 'ltr' | 'rtl'): Promise<void>;
+    // primaryWritingMode は縦組みのとき 'vertical-rl' を渡す。OPF に Amazon 独自メタとして
+    // 埋め込み、Kindle に「縦組み本」＝縦中横エンジンを起動させる合図にする（無指定なら注入しない）。
+    compileEpub(sections: EpubSection[], outputPath: string, readingProgression: 'ltr' | 'rtl', primaryWritingMode?: 'vertical-rl' | 'horizontal-tb'): Promise<void>;
 }
 
 export interface ConfigReader {
@@ -77,7 +79,9 @@ export async function convertAtb(
         // ページ送りの向きは組み方向に合わせる（縦書きは右→左＝rtl、横書きは左→右＝ltr）。
         const sections = deps.converter.convertEpubSections(atbText, config);
         const readingProgression = config.writingMode === 'vertical' ? 'rtl' : 'ltr';
-        await deps.pdfRunner.compileEpub(sections, epubPath, readingProgression);
+        // 縦組みのみ primary-writing-mode を注入する（Kindle の縦中横判定用。横組みは不要）。
+        const primaryWritingMode = config.writingMode === 'vertical' ? 'vertical-rl' as const : undefined;
+        await deps.pdfRunner.compileEpub(sections, epubPath, readingProgression, primaryWritingMode);
     }
 
     const charCount = countChars(atbText);

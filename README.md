@@ -121,6 +121,8 @@ node -v
 
 ＠本は、[クイックスタート](#クイックスタート)の手順 2 のとおり**作品フォルダごとに**インストールします。ツール本体を別途ダウンロードしてきて、その中に原稿を書くような使い方はしません。
 
+> ＠本はまだ npm レジストリには公開していません。インストールは GitHub リポジトリを直接指定する形（`github:tsuyukusado/at-book-release`）に統一しています。`npm install at-book` では入りませんのでご注意ください。公開した際は、この README にレジストリからのインストール方法を追記します。
+
 バージョンを固定したい場合は、タグやコミットを `#` の後ろに指定できます。
 
 ```sh
@@ -405,7 +407,7 @@ npm run setup
 npm test               # テストを実行
 npm run test:coverage  # テストカバレッジを計測
 npm run build          # TypeScript をビルド
-npm pack               # 配布用の tarball を作る
+npm pack               # 配布用の tarball を作る（同梱物の確認用。公開はまだしていません）
 ```
 
 テスト項目の一覧は `doc/test-items.md` にあります。

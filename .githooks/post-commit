@@ -1,5 +1,5 @@
 #!/bin/sh
-# [at-book] auto-generated hook v13
+# [at-book] auto-generated hook v14
 # --root を付けないと、親を持たない最初のコミットで diff-tree が何も出力せず、
 # 新規リポジトリの1回目のコミットだけ生成が走らない（新規利用者が最初に踏む）。
 changed=$(git diff-tree --no-commit-id -r --name-only --root HEAD | grep '\.atb$')
@@ -75,8 +75,10 @@ for file in $changed; do
     $ATBOOK count --committed "$file" || true
 
     AFILE="$PROJ_DIR/$file"
-    LOG="$PROJ_DIR/dist/at-book/.at-book-generate.log"
-    mkdir -p "$PROJ_DIR/dist/at-book"
+    # 1回のコミットで複数の作品が対象になりうるため、このログだけはリポジトリ全体で
+    # 1つにまとめる（成果物そのものは作品ごとの dist/ に出る）。
+    LOG="$PROJ_DIR/dist/.at-book-generate.log"
+    mkdir -p "$PROJ_DIR/dist"
     if [ "$HAS_TTY" = 1 ]; then
         # 端末からのコミット: 端末に直接出力
         echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..." >/dev/tty

@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-const CURRENT_MARKER = "# [at-book] auto-generated hook v13";
+const CURRENT_MARKER = "# [at-book] auto-generated hook v14";
 const ANY_MARKER     = "# [at-book] auto-generated hook";
 
 const HOOK_CONTENT = `#!/bin/sh
@@ -82,8 +82,10 @@ for file in $changed; do
     $ATBOOK count --committed "$file" || true
 
     AFILE="$PROJ_DIR/$file"
-    LOG="$PROJ_DIR/dist/at-book/.at-book-generate.log"
-    mkdir -p "$PROJ_DIR/dist/at-book"
+    # 1回のコミットで複数の作品が対象になりうるため、このログだけはリポジトリ全体で
+    # 1つにまとめる（成果物そのものは作品ごとの dist/ に出る）。
+    LOG="$PROJ_DIR/dist/.at-book-generate.log"
+    mkdir -p "$PROJ_DIR/dist"
     if [ "$HAS_TTY" = 1 ]; then
         # 端末からのコミット: 端末に直接出力
         echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..." >/dev/tty

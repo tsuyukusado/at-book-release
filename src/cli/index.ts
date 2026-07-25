@@ -249,11 +249,34 @@ function readVersion(): string {
     }
 }
 
+// 使い方の一覧。引数なし＝カレント配下ビルドなので、usage の入口はここだけになる。
+function printHelp(): void {
+    console.log('使い方: at-book [対象|コマンド]');
+    console.log('');
+    console.log('  at-book                      カレントディレクトリ配下の autoGenerate をビルド');
+    console.log('  at-book <フォルダ>           配下の at-book.config.json を全て探してビルド');
+    console.log('  at-book <at-book.config.json> その設定ファイルの autoGenerate だけをビルド');
+    console.log('  at-book <原稿.atb>           その原稿だけをビルド（隣の設定ファイルを使う）');
+    console.log('');
+    console.log('  at-book init                 カレントディレクトリに初期設定ファイルを生成');
+    console.log('  at-book web <原稿.atb>       ウェブ投稿用テキストに変換');
+    console.log('  at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]');
+    console.log('                               表紙テンプレート（SVG）を生成');
+    console.log('');
+    console.log('  --version, -v                バージョンを表示');
+    console.log('  --help, -h                   この使い方を表示');
+}
+
 async function main(): Promise<void> {
     const [subcommand, ...rest] = process.argv.slice(2);
 
     if (subcommand === "--version" || subcommand === "-v") {
         console.log(readVersion());
+        return;
+    }
+
+    if (subcommand === "--help" || subcommand === "-h") {
+        printHelp();
         return;
     }
 

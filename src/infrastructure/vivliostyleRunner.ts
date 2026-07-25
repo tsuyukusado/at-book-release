@@ -119,11 +119,18 @@ function resolveVivliostyleBin(): string {
     return 'vivliostyle';
 }
 
-// ビルド用ディレクトリを用意する（フォント同梱・fontconfig 生成）。pdf/epub 共通。
-// 返り値は生成した fontconfig 設定のパス（Chrome for Testing 使用時のみ使う）。
-async function prepareBuildDir(absDir: string): Promise<string> {
+// ビルド用ディレクトリを用意する。返り値は生成した fontconfig 設定のパス
+// （Chrome for Testing 使用時のみ使う）。
+//
+// bundleFonts は @font-face 用の TTF 実体をこのディレクトリへ置くかどうか。
+// PDF は同梱フォントを埋め込むので true。EPUB はビルドディレクトリの中身が
+// そのまま EPUB に取り込まれる（＝置けば 17MB の TTF が同梱される）ため false。
+// fontconfig の生成は両方で行う。これは Chrome 自身のフォールバック用で、
+// 発見可能なフォントが 1 つも無い環境でのクラッシュを防ぐ役目があり、
+// EPUB の成果物には影響しない。
+async function prepareBuildDir(absDir: string, bundleFonts: boolean): Promise<string> {
     await mkdir(absDir, { recursive: true });
-    await copyFonts(absDir);
+    if (bundleFonts) await copyFonts(absDir);
     return writeFontconfig(absDir);
 }
 
@@ -165,7 +172,7 @@ async function runPdfBuild(htmlContent: string, outputPath: string): Promise<voi
     const absHtmlPath = path.resolve(path.join(dir, `${base}.html`));
     const absOutPath  = path.resolve(outputPath);
 
-    const fontconfigFile = await prepareBuildDir(absDir);
+    const fontconfigFile = await prepareBuildDir(absDir, true);
     await writeFile(absHtmlPath, htmlContent, 'utf-8');
 
     await runVivliostyle([absHtmlPath], absOutPath, absDir, fontconfigFile, 'pdf');
@@ -186,7 +193,7 @@ async function runEpubBuild(sections: EpubSection[], outputPath: string, reading
     const buildDir   = path.join(path.resolve(path.dirname(outputPath)), `.epub-build-${base}`);
 
     await rm(buildDir, { recursive: true, force: true });
-    const fontconfigFile = await prepareBuildDir(buildDir);
+    const fontconfigFile = await prepareBuildDir(buildDir, false);
 
     // 1 セクション = 1 HTML ファイル = 1 spine。ファイル名はレンダラが決める（目次リンクが
     // その名前を指すため、書き出す名前と entry を必ずレンダラ由来の fileName に合わせる）。

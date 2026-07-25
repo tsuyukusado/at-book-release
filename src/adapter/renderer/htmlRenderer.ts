@@ -145,6 +145,25 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
             '-webkit-text-combine-upright: all;',
           ].join('\n  ');
 
+    // 本文フォント。PDF は紙面を固定する成果物なので、環境によって書体が変わらないよう
+    // 同梱の Shippori Mincho を @font-face で埋め込む（実体は組版時にビルドディレクトリへ
+    // コピーされ、PDF にはサブセットだけが残る）。
+    // EPUB は埋め込まず、読者の端末のフォントに委ねる。リフロー型の一般的な作法であり、
+    // かつ EPUB はビルドディレクトリの中身がそのまま同梱されるため、埋め込むと本文数十KB
+    // に対して 17MB の TTF が入って配信サイズが跳ね上がる。
+    const fontFaceCss = format === 'epub' ? '' : `@font-face {
+  font-family: "Shippori Mincho";
+  font-weight: normal;
+  src: url("fonts/ShipporiMincho-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Shippori Mincho";
+  font-weight: bold;
+  src: url("fonts/ShipporiMincho-Bold.ttf") format("truetype");
+}
+`;
+    const bodyFontFamily = format === 'epub' ? 'serif' : '"Shippori Mincho", serif';
+
     return `
 @page {
   size: ${widthMm}mm ${heightMm}mm;
@@ -167,19 +186,9 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
   ${nombreBox(verso.nombre)}
 }
 
-@font-face {
-  font-family: "Shippori Mincho";
-  font-weight: normal;
-  src: url("fonts/ShipporiMincho-Regular.ttf") format("truetype");
-}
-@font-face {
-  font-family: "Shippori Mincho";
-  font-weight: bold;
-  src: url("fonts/ShipporiMincho-Bold.ttf") format("truetype");
-}
-
+${fontFaceCss}
 html {
-  font-family: "Shippori Mincho", serif;
+  font-family: ${bodyFontFamily};
   font-size: 9pt;
   line-height: 1.75;
   ${isVertical ? (format === 'epub' ? '-epub-writing-mode: vertical-rl;\n  writing-mode: vertical-rl;' : 'writing-mode: vertical-rl;') : ''}

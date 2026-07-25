@@ -76,6 +76,8 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | REND-15 | 縦中横（横書き） | 変換せず素通し（span で包まない） | htmlRenderer.test.ts | ✅ |
 | REND-16 | HTML特殊文字 | `<` `>` `&` をエスケープ | htmlRenderer.test.ts | ✅ |
 | REND-17 | 最終ページのコロフォン | 末尾に `<div class="atb-colophon">`（`running()` で最終ページ脚注へ） | htmlRenderer.test.ts | ✅ |
+| FONT-01 | PDF の本文フォント | `@font-face` で同梱フォントを埋め込み、`font-family: "Shippori Mincho", serif` | htmlRenderer.test.ts | ✅ |
+| FONT-02 | EPUB の本文フォント | `@font-face` を出さず `font-family: serif`（読者の端末のフォントに委ねる） | htmlRenderer.test.ts | ✅ |
 
 ## 4. 文字数カウント — `usecase/countChars.ts` `countChars`
 

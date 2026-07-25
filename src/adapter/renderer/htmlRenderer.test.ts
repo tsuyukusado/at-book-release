@@ -252,6 +252,26 @@ describe('ページ設定 CSS', () => {
         expect(pdf).not.toContain('text-combine: horizontal;');
     });
 
+    it('[FONT-01] PDF は同梱フォントを @font-face で埋め込む', () => {
+        // 紙面を固定する成果物なので、環境によって書体が変わらないよう同梱フォントを使う。
+        const pdf = render(parse('文'), vertical, 'pdf');
+        expect(pdf).toContain('@font-face');
+        expect(pdf).toContain('src: url("fonts/ShipporiMincho-Regular.ttf") format("truetype");');
+        expect(pdf).toContain('src: url("fonts/ShipporiMincho-Bold.ttf") format("truetype");');
+        expect(pdf).toContain('font-family: "Shippori Mincho", serif;');
+    });
+
+    it('[FONT-02] EPUB は本文フォントを埋め込まず、読者の端末のフォントに委ねる', () => {
+        // EPUB はビルドディレクトリの中身がそのまま同梱されるため、@font-face を出すと
+        // 本文数十KB に対して 17MB の TTF が入り、配信サイズが跳ね上がる。
+        const epub = render(parse('文'), vertical, 'epub');
+        expect(epub).not.toContain('@font-face');
+        // フォント実体への参照が無いこと（CSS コメント中の言及は無害なので名前では判定しない）。
+        expect(epub).not.toContain('src: url("fonts/');
+        expect(epub).not.toContain('font-family: "Shippori Mincho"');
+        expect(epub).toContain('font-family: serif;');
+    });
+
     it('用紙サイズが @page size に反映される（a6 = 105mm 148mm）', () => {
         expect(html('文', horizontal)).toContain('size: 105mm 148mm;');
     });

@@ -222,7 +222,7 @@ async function runConvert(atbPath: string): Promise<void> {
             pdfRunner:    vivliostyleRunner,
             configReader: nodeConfigReader,
         },
-        { atbPath }
+        { atbPath, outDir: path.join('dist', 'at-book') }
     );
     if (pdfPath)  console.log(`生成完了: ${pdfPath}`);
     if (epubPath) console.log(`生成完了: ${epubPath}`);

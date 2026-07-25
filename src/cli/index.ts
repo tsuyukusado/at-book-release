@@ -227,7 +227,7 @@ async function runCountChars(atbPathArg: string, opts: { fromCommit?: boolean } 
     const atbPath = work.repoPath;
     let atbText: string;
     if (opts.fromCommit) {
-        // post-commit フックなど: コミットされた版（HEAD）の内容を数える
+        // コミット済み(HEAD)の内容を数える
         try {
             atbText = execSync(`git show HEAD:${work.repoPath}`, { encoding: 'utf-8' });
         } catch {
@@ -249,7 +249,7 @@ async function runCountChars(atbPathArg: string, opts: { fromCommit?: boolean } 
     const pageCount = await readExistingPageCount(work);
 
     const state = await readCountState(countStateFileOf(work.outDir));
-    // 差分の基準: フック実行は親コミット(HEAD~1)と、手動実行は現在のコミット(HEAD)と比較する
+    // 差分の基準: --committed 指定時は親コミット(HEAD~1)、既定は現在のコミット(HEAD)
     const baseRef = opts.fromCommit ? "HEAD~1" : "HEAD";
     const { charDiff, isNew } = commitHash
         ? charDiffFromRef(baseRef, atbPath, charCount)
@@ -444,8 +444,8 @@ async function main(): Promise<void> {
         }
         await runWeb(fileArg);
     } else if (subcommand === "count") {
-        // --committed: コミット済み(HEAD)の内容を数える（post-commit フックが使用）。
-        // フラグ無し（手動実行）は作業ツリーのローカル内容を数える。
+        // --committed: コミット済み(HEAD)の内容を数える。
+        // フラグ無しは作業ツリーのローカル内容を数える。
         const fromCommit = rest.includes("--committed");
         const fileArg = rest.find(a => !a.startsWith("--"));
         if (fileArg) {

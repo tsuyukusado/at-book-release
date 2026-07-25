@@ -208,25 +208,42 @@ function readVersion(): string {
 }
 
 // 使い方の一覧。引数なし＝カレント配下ビルドなので、usage の入口はここだけになる。
-function printHelp(): void {
-    console.log('使い方: at-book [対象|コマンド]');
-    console.log('');
-    console.log('  at-book                      カレントディレクトリ配下の autoGenerate をビルド');
-    console.log('  at-book <フォルダ>           配下の at-book.config.json を全て探してビルド');
-    console.log('  at-book <at-book.config.json> その設定ファイルの autoGenerate だけをビルド');
-    console.log('  at-book <原稿.atb>           その原稿だけをビルド（隣の設定ファイルを使う）');
-    console.log('');
-    console.log('  at-book init                 カレントディレクトリに初期設定ファイルを生成');
-    console.log('  at-book web <原稿.atb>       ウェブ投稿用テキストに変換');
-    console.log('  at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]');
-    console.log('                               表紙テンプレート（SVG）を生成');
-    console.log('');
-    console.log('  --version, -v                バージョンを表示');
-    console.log('  --help, -h                   この使い方を表示');
+function helpText(): string {
+    return [
+        '使い方: at-book [対象|コマンド]',
+        '',
+        '  at-book                      カレントディレクトリ配下の autoGenerate をビルド',
+        '  at-book <フォルダ>           配下の at-book.config.json を全て探してビルド',
+        '  at-book <at-book.config.json> その設定ファイルの autoGenerate だけをビルド',
+        '  at-book <原稿.atb>           その原稿だけをビルド（隣の設定ファイルを使う）',
+        '',
+        '  at-book init                 カレントディレクトリに初期設定ファイルを生成',
+        '  at-book web <原稿.atb>       ウェブ投稿用テキストに変換',
+        '  at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]',
+        '                               表紙テンプレート（SVG）を生成',
+        '',
+        '  --version, -v                バージョンを表示',
+        '  --help, -h                   この使い方を表示',
+    ].join('\n');
+}
+
+// ＠本が受け付けるオプションはこれだけ。他はすべて打ち間違いとして扱う。
+const KNOWN_FLAGS = new Set(['--version', '-v', '--help', '-h']);
+
+// 知らないオプションを弾く。
+// ビルド対象として扱ってしまうと「見つかりません: --varsion」というパスの話になり、
+// 打ち間違いだと気づきにくい。オプションとして拒否し、使い方を添える。
+function rejectUnknownOption(arg: string): never {
+    console.error(`エラー: 知らないオプションです: ${arg}`);
+    console.error('');
+    console.error(helpText());
+    process.exit(1);
 }
 
 async function main(): Promise<void> {
     const [subcommand, ...rest] = process.argv.slice(2);
+
+    if (subcommand?.startsWith('-') && !KNOWN_FLAGS.has(subcommand)) rejectUnknownOption(subcommand);
 
     if (subcommand === "--version" || subcommand === "-v") {
         console.log(readVersion());
@@ -234,23 +251,27 @@ async function main(): Promise<void> {
     }
 
     if (subcommand === "--help" || subcommand === "-h") {
-        printHelp();
+        console.log(helpText());
         return;
     }
+
+    // サブコマンドはどれもオプションを取らないので、残りに現れた `-` 始まりは打ち間違い。
+    const strayOption = rest.find(a => a.startsWith('-'));
+    if (strayOption) rejectUnknownOption(strayOption);
 
     if (subcommand === "init") {
         await runInit();
     } else if (subcommand === "cover") {
         await runCover(rest);
     } else if (subcommand === "web") {
-        const fileArg = rest.find(a => !a.startsWith("--"));
+        const fileArg = rest[0];
         if (!fileArg) {
-            console.error("使い方: at-book web <file.atb>");
+            console.error("使い方: at-book web <原稿.atb>");
             process.exit(1);
         }
         await runWeb(await resolveWork(fileArg));
     } else {
-        // 残りはすべてビルド対象の指定として扱う（未指定ならカレントディレクトリ）。
+        // 残りはすべてビルド対象の指定として扱う（未指定ならビルド対象はカレントディレクトリ）。
         await runBuild(subcommand);
     }
 }

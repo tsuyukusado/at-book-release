@@ -178,7 +178,17 @@ async function buildConfigDir(configDir: string): Promise<boolean> {
     const config = await nodeConfigReader.read(path.join(configDir, '_'));
     if (!config.autoGenerate || config.autoGenerate.length === 0) return false;
     for (const relPath of config.autoGenerate) {
-        await runConvert(path.join(configDir, relPath));
+        const atbPath = path.join(configDir, relPath);
+        // init 直後のプレースホルダーのまま実行する経路が新規ユーザーの最初の一歩に
+        // なりやすい。生のスタックトレースではなく、直し方まで日本語で案内する。
+        try {
+            statSync(atbPath);
+        } catch {
+            console.error(`エラー: 原稿が見つかりません: ${relPath}`);
+            console.error(`  ${path.join(configDir, CONFIG_FILE_NAME)} の autoGenerate に、実在する原稿（.atb）のファイル名を書いてください。`);
+            process.exit(1);
+        }
+        await runConvert(atbPath);
     }
     return true;
 }
@@ -265,6 +275,9 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-    console.error(err);
+    // 利用者向け CLI なので、想定内の失敗はスタックトレースではなくメッセージだけを出す。
+    // Error 以外（想定外の投げ方）はそのまま出して手掛かりを残す。
+    if (err instanceof Error) console.error(`エラー: ${err.message}`);
+    else console.error(err);
     process.exit(1);
 });

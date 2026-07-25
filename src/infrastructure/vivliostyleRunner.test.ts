@@ -70,10 +70,17 @@ describe('compile（PDF 組版）', () => {
         const outPdf = path.join(dir, 'book-honbun.pdf');
         await makePdf(outPdf, 2); // 実際の組版はモックなので、成果物は先に置いておく
 
+        // 中間 HTML は組版後に片付けられるため、組版中（spawn 時点）の中身を覗いておく。
+        const htmlPath = path.join(dir, 'book-honbun.html');
+        let htmlAtSpawn: string | undefined;
+        spawnMock.mockImplementation(() => {
+            htmlAtSpawn = readFileSync(htmlPath, 'utf-8');
+            return fakeChild(0);
+        });
+
         const { pageCount } = await vivliostyleRunner.compile('<html>本文</html>', outPdf);
 
-        const htmlPath = path.join(dir, 'book-honbun.html');
-        expect(readFileSync(htmlPath, 'utf-8')).toBe('<html>本文</html>');
+        expect(htmlAtSpawn).toBe('<html>本文</html>');
         expect(pageCount).toBe(2);
 
         const args = spawnedArgs();
@@ -83,11 +90,12 @@ describe('compile（PDF 組版）', () => {
         expect(args).not.toContain('-f'); // pdf は拡張子から推論させる
     });
 
-    it('@font-face 用に置いた fonts/ を組版後に片付ける', async () => {
+    it('@font-face 用に置いた fonts/ と中間 HTML を組版後に片付ける', async () => {
         const outPdf = path.join(dir, 'book-honbun.pdf');
         await makePdf(outPdf, 1);
         await vivliostyleRunner.compile('<html></html>', outPdf);
         expect(existsSync(path.join(dir, 'fonts'))).toBe(false);
+        expect(existsSync(path.join(dir, 'book-honbun.html'))).toBe(false);
     });
 
     it('AT_BOOK_CHROME が実在パスなら --executable-browser に渡す', async () => {

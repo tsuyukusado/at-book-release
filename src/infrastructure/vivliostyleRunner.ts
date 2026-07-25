@@ -125,9 +125,10 @@ async function runPdfBuild(htmlContent: string, outputPath: string): Promise<voi
     try {
         await runVivliostyle([absHtmlPath], absOutPath, absDir, 'pdf');
     } finally {
-        // @font-face 用に置いた TTF 実体（17MB）を出力先に残さない。
-        // PDF にはサブセットが埋め込まれ済みで、以降は不要なため。
+        // @font-face 用に置いた TTF 実体（17MB）と組版用の中間 HTML を出力先に残さない。
+        // PDF にはフォントのサブセットが埋め込まれ済みで、どちらも以降は不要なため。
         await rm(path.join(absDir, 'fonts'), { recursive: true, force: true });
+        await rm(absHtmlPath, { force: true });
     }
 }
 

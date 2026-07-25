@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createWriteStream, existsSync, readFileSync } from 'fs';
-import { mkdtemp, writeFile, rm } from 'fs/promises';
+import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import archiver from 'archiver';
@@ -66,21 +66,27 @@ describe('readPdfPageCount', () => {
 });
 
 describe('compile（PDF 組版）', () => {
-    it('HTML を出力先に書き、vivliostyle build を出力パス付きで起動する', async () => {
+    // PDF の隔離ディレクトリ。出力先には成果物だけを残す。
+    const pdfBuildDir = () => path.join(dir, '.pdf-build-book-honbun');
+
+    it('隔離ディレクトリに HTML とフォントを置き、vivliostyle build を出力パス付きで起動する', async () => {
         const outPdf = path.join(dir, 'book-honbun.pdf');
         await makePdf(outPdf, 2); // 実際の組版はモックなので、成果物は先に置いておく
 
-        // 中間 HTML は組版後に片付けられるため、組版中（spawn 時点）の中身を覗いておく。
-        const htmlPath = path.join(dir, 'book-honbun.html');
-        let htmlAtSpawn: string | undefined;
+        // 隔離ディレクトリは組版後に片付けられるため、組版中（spawn 時点）の中身を覗いておく。
+        let seenAtSpawn: { html: string; fonts: boolean } | undefined;
         spawnMock.mockImplementation(() => {
-            htmlAtSpawn = readFileSync(htmlPath, 'utf-8');
+            seenAtSpawn = {
+                html:  readFileSync(path.join(pdfBuildDir(), 'book-honbun.html'), 'utf-8'),
+                fonts: existsSync(path.join(pdfBuildDir(), 'fonts', 'ShipporiMincho-Regular.ttf')),
+            };
             return fakeChild(0);
         });
 
         const { pageCount } = await vivliostyleRunner.compile('<html>本文</html>', outPdf);
 
-        expect(htmlAtSpawn).toBe('<html>本文</html>');
+        expect(seenAtSpawn!.html).toBe('<html>本文</html>');
+        expect(seenAtSpawn!.fonts).toBe(true);
         expect(pageCount).toBe(2);
 
         const args = spawnedArgs();
@@ -90,12 +96,32 @@ describe('compile（PDF 組版）', () => {
         expect(args).not.toContain('-f'); // pdf は拡張子から推論させる
     });
 
-    it('@font-face 用に置いた fonts/ と中間 HTML を組版後に片付ける', async () => {
+    it('組版に成功したら隔離ディレクトリを片付ける', async () => {
         const outPdf = path.join(dir, 'book-honbun.pdf');
         await makePdf(outPdf, 1);
         await vivliostyleRunner.compile('<html></html>', outPdf);
-        expect(existsSync(path.join(dir, 'fonts'))).toBe(false);
-        expect(existsSync(path.join(dir, 'book-honbun.html'))).toBe(false);
+        expect(existsSync(pdfBuildDir())).toBe(false);
+    });
+
+    it('出力先にもとからある fonts/ を巻き込んで消さない', async () => {
+        // 出力先を作業場にしていた頃は、後始末の rm が利用者の fonts/ ごと消していた。
+        const outPdf  = path.join(dir, 'book-honbun.pdf');
+        const userFile = path.join(dir, 'fonts', 'my-font.ttf');
+        await mkdir(path.join(dir, 'fonts'), { recursive: true });
+        await writeFile(userFile, 'ユーザーのファイル');
+        await makePdf(outPdf, 1);
+
+        await vivliostyleRunner.compile('<html></html>', outPdf);
+
+        expect(existsSync(userFile)).toBe(true);
+    });
+
+    it('組版に失敗したら隔離ディレクトリを残し、その場所を知らせる', async () => {
+        spawnMock.mockImplementation(() => fakeChild(1));
+        const outPdf = path.join(dir, 'book-honbun.pdf');
+        await expect(vivliostyleRunner.compile('<html></html>', outPdf))
+            .rejects.toThrow(pdfBuildDir());
+        expect(existsSync(path.join(pdfBuildDir(), 'book-honbun.html'))).toBe(true);
     });
 
     it('AT_BOOK_CHROME が実在パスなら --executable-browser に渡す', async () => {
@@ -108,12 +134,11 @@ describe('compile（PDF 組版）', () => {
         expect(args).toContain(process.execPath);
     });
 
-    it('vivliostyle が非 0 で終了したら失敗し、fonts/ の後始末はそれでも行う', async () => {
+    it('vivliostyle が非 0 で終了したら失敗する', async () => {
         spawnMock.mockImplementation(() => fakeChild(1));
         const outPdf = path.join(dir, 'book-honbun.pdf');
         await expect(vivliostyleRunner.compile('<html></html>', outPdf))
             .rejects.toThrow('vivliostyle exited with code 1');
-        expect(existsSync(path.join(dir, 'fonts'))).toBe(false);
     });
 
     it('AT_BOOK_CHROME 未指定の失敗では AT_BOOK_CHROME の指定を案内する', async () => {

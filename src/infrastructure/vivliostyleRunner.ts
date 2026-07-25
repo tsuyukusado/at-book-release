@@ -126,24 +126,31 @@ async function runVivliostyle(
 }
 
 // 紙面固定の PDF を組む。単一 HTML をそのまま Vivliostyle に渡す。
+//
+// EPUB と同じく専用の隔離ディレクトリで組む。中間 HTML と @font-face 用の TTF 実体を
+// 出力先に直接置くと、後始末（fonts/ の削除）が利用者の同名ファイルを巻き込むため。
+// 隔離ディレクトリなら、消してよいものだけが中に入っている。
 async function runPdfBuild(htmlContent: string, outputPath: string): Promise<void> {
-    const dir      = path.dirname(outputPath);
-    const base     = path.basename(outputPath, '.pdf');
-    const absDir      = path.resolve(dir);
-    const absHtmlPath = path.resolve(path.join(dir, `${base}.html`));
-    const absOutPath  = path.resolve(outputPath);
+    const base       = path.basename(outputPath, '.pdf');
+    const absOutPath = path.resolve(outputPath);
+    const buildDir   = path.join(path.resolve(path.dirname(outputPath)), `.pdf-build-${base}`);
 
-    await prepareBuildDir(absDir, true);
+    await rm(buildDir, { recursive: true, force: true });
+    await prepareBuildDir(buildDir, true);
+
+    const absHtmlPath = path.join(buildDir, `${base}.html`);
     await writeFile(absHtmlPath, htmlContent, 'utf-8');
 
     try {
-        await runVivliostyle([absHtmlPath], absOutPath, absDir, 'pdf');
-    } finally {
-        // @font-face 用に置いた TTF 実体（17MB）と組版用の中間 HTML を出力先に残さない。
-        // PDF にはフォントのサブセットが埋め込まれ済みで、どちらも以降は不要なため。
-        await rm(path.join(absDir, 'fonts'), { recursive: true, force: true });
-        await rm(absHtmlPath, { force: true });
+        await runVivliostyle([absHtmlPath], absOutPath, buildDir, 'pdf');
+    } catch (err) {
+        // 失敗時だけは隔離ディレクトリを残す。中間 HTML が原因調査の手掛かりになる。
+        const reason = err instanceof Error ? err.message : String(err);
+        throw new Error(`${reason}\n  組版に使った中間ファイルを残しました: ${buildDir}`);
     }
+    // 成功したら片付ける。PDF にはフォントのサブセットが埋め込まれ済みで、
+    // TTF 実体（17MB）も中間 HTML も以降は不要。
+    await rm(buildDir, { recursive: true, force: true });
 }
 
 // リフロー型 EPUB を組む。改ページ境界で分割済みの各セクションを個別の HTML ファイルに

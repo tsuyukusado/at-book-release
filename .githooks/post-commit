@@ -1,5 +1,5 @@
 #!/bin/sh
-# [at-book] auto-generated hook v12
+# [at-book] auto-generated hook v13
 changed=$(git diff-tree --no-commit-id -r --name-only HEAD | grep '\.atb$')
 if [ -z "$changed" ]; then
     exit 0
@@ -44,9 +44,21 @@ fi
 # 誤って端末ありと判定してしまうため、実際に open を試して確認する。
 if ( : >/dev/tty ) 2>/dev/null; then HAS_TTY=1; else HAS_TTY=0; fi
 
-# at-book コマンドが PATH に無い場合は静かに失敗せず、復旧方法を案内して終了する
-if ! command -v at-book >/dev/null 2>&1; then
-    MSG="[at-book] ⚠ at-book コマンドが見つかりません。リポジトリで 'npm run setup'（または 'npm link'）を実行してください。PDF 自動生成をスキップします。"
+# at-book の実行方法を解決する。git フックは cwd がリポジトリルートで実行される。
+#   1. ローカル依存 (node_modules/.bin) … npm 配布での通常経路。最速で、作品ごとに
+#      バージョンが固定されるため、過去作を組み直しても組版が変わらない。
+#   2. npx --no-install … workspaces でホイスティングされた場合の保険。
+#      --no-install を付け、レジストリからの暗黙ダウンロードは行わせない。
+#   3. PATH 上の at-book … 'npm link' で入れた従来ユーザーとの後方互換。
+# どれも無ければ静かに失敗せず、復旧方法を案内して終了する。
+if [ -x "./node_modules/.bin/at-book" ]; then
+    ATBOOK="./node_modules/.bin/at-book"
+elif npx --no-install at-book --version >/dev/null 2>&1; then
+    ATBOOK="npx --no-install at-book"
+elif command -v at-book >/dev/null 2>&1; then
+    ATBOOK="at-book"
+else
+    MSG="[at-book] ⚠ at-book が見つかりません。このリポジトリで 'npm i -D at-book' を実行してください。自動生成をスキップします。"
     if [ "$HAS_TTY" = 1 ]; then echo "$MSG" >/dev/tty; else echo "$MSG"; fi
     exit 0
 fi
@@ -58,7 +70,7 @@ for file in $changed; do
     fi
     echo "$targets" | grep -qxF "$file" || continue
 
-    at-book count --committed "$file" || true
+    $ATBOOK count --committed "$file" || true
 
     AFILE="$PROJ_DIR/$file"
     LOG="$PROJ_DIR/dist/at-book/.at-book-generate.log"
@@ -66,16 +78,16 @@ for file in $changed; do
     if [ "$HAS_TTY" = 1 ]; then
         # 端末からのコミット: 端末に直接出力
         echo "[at-book] .atb ファイルの変更を検出しました。PDF を生成しています..." >/dev/tty
-        at-book "$AFILE" >/dev/tty 2>&1
+        $ATBOOK "$AFILE" >/dev/tty 2>&1
         [ $? -eq 0 ] && echo "[at-book] $file → 生成完了" >/dev/tty || echo "[at-book] $file → 生成失敗" >/dev/tty
     elif [ "$(uname)" = "Darwin" ]; then
         # macOS の GUI コミット: Terminal を開いて生成
-        osascript -e "tell application \"Terminal\"" -e "activate" -e "do script \"cd '$PROJ_DIR' && at-book '$AFILE'\"" -e "end tell" 2>/dev/null || true
+        osascript -e "tell application \"Terminal\"" -e "activate" -e "do script \"cd '$PROJ_DIR' && $ATBOOK '$AFILE'\"" -e "end tell" 2>/dev/null || true
     else
         # tty の無い GUI コミット(VS Code 等 / Linux): バックグラウンドで生成し結果をログに記録
         {
             echo "[at-book] $(date '+%Y-%m-%d %H:%M:%S') 生成開始: $file"
-            if at-book "$AFILE"; then
+            if $ATBOOK "$AFILE"; then
                 echo "[at-book] $file → 生成完了"
             else
                 echo "[at-book] $file → 生成失敗"

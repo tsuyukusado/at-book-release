@@ -108,7 +108,21 @@ async function runVivliostyle(
         ...(browser ? ['--executable-browser', browser] : []),
     ];
 
-    await spawnAsync(cmd, args, absDir, { ...process.env });
+    try {
+        await spawnAsync(cmd, args, absDir, { ...process.env });
+    } catch (err) {
+        // Vivliostyle 同梱 Chromium のダウンロードに失敗する環境がある（Playwright が
+        // 対応しない OS 等）。その場合でも手元のブラウザを指せば組めるので、
+        // AT_BOOK_CHROME 未指定の失敗では必ずその道筋を案内する。
+        const reason = err instanceof Error ? err.message : String(err);
+        const lines = [`組版に失敗しました（${reason}）。`];
+        if (!process.env.AT_BOOK_CHROME) {
+            lines.push('  ブラウザの取得や起動に失敗した場合は、手元の Chrome / Chromium の実行ファイルを');
+            lines.push('  環境変数 AT_BOOK_CHROME に指定して再実行してください。');
+            lines.push('  例: AT_BOOK_CHROME=/usr/bin/google-chrome npx at-book');
+        }
+        throw new Error(lines.join('\n'));
+    }
 }
 
 // 紙面固定の PDF を組む。単一 HTML をそのまま Vivliostyle に渡す。

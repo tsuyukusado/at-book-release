@@ -24,6 +24,9 @@ export interface PaperConfig {
 // 名前が被る場合は設定ファイルの outDir で変更できる。
 export const DEFAULT_OUT_DIR_NAME = 'at-book-out';
 
+// 設定ファイルの名前。原稿と同じフォルダに置く。
+export const CONFIG_FILE_NAME = 'at-book.config.json';
+
 // 日本語の小説を組むツールなので、既定は縦書き。README の設定表も vertical を
 // 既定として案内している。
 export const defaultPaperConfig: PaperConfig = {

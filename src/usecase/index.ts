@@ -4,6 +4,9 @@ export type { FileWriter, GenerateCoverTemplatePorts, GenerateCoverTemplateInput
 export { generateCoverTemplate } from "./generateCoverTemplate";
 export type { ConvertAtbToWebPorts, ConvertAtbToWebInput, ConvertAtbToWebOutput } from "./convertAtbToWeb";
 export { convertAtbToWeb } from "./convertAtbToWeb";
-export { buildDefaultConfigContent } from "./initConfig";
+export { buildDefaultConfigContent, initConfig } from "./initConfig";
+export type { InitConfigPorts, InitConfigResult } from "./initConfig";
 export { resolveOutDir } from "./resolveOutDir";
 export type { ConfigLoad, ConfigLoader } from "./configLoad";
+export { resolveBuildTargets } from "./resolveBuildTargets";
+export type { BuildTarget, ResolveFailure, ResolveResult, PathKind, ResolveBuildTargetsPorts } from "./resolveBuildTargets";

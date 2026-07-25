@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as path from "path";
-import { readFileSync, statSync } from "fs";
+import { readFileSync, readdirSync, statSync } from "fs";
 import { convertAtb, convertAtbToWeb, buildDefaultConfigContent } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
@@ -157,9 +157,17 @@ async function runInit(): Promise<void> {
         // 存在しない場合のみ続行する。
     }
 
-    await nodeFileWriter.write(configPath, buildDefaultConfigContent());
+    const atbFileNames = readdirSync(path.dirname(configPath))
+        .filter(name => name.endsWith('.atb'))
+        .sort();
+
+    await nodeFileWriter.write(configPath, buildDefaultConfigContent(atbFileNames));
     console.log(`生成完了: ${configPath}`);
-    console.log('  autoGenerate に組版したい原稿のファイル名を書いてください。');
+    if (atbFileNames.length > 0) {
+        console.log(`  autoGenerate に既存の原稿を指定しました: ${atbFileNames.join(', ')}`);
+    } else {
+        console.log('  autoGenerate に組版したい原稿のファイル名を書いてください。');
+    }
 }
 
 // 設定ファイル1つ分（＝作品1つ分）をビルドする。

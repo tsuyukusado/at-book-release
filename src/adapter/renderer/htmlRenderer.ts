@@ -166,10 +166,10 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
 `;
     const bodyFontFamily = format === 'epub' ? 'serif' : '"Shippori Mincho", serif';
 
-    // 紙面固定（ページメディア）の CSS 一式。@page・ノンブル・コロフォンはページメディア
-    // 専用の機構で、リフロー型 EPUB リーダーは解釈しない。特にコロフォンは
-    // position:running が無視されて本文末尾に地の文として出てしまうため、
-    // README の「PDF 専用」どおり EPUB にはこの一式を出さない。
+    // 紙面固定（ページメディア）の CSS 一式。@page とノンブルはページメディア専用の
+    // 機構で、リフロー型 EPUB リーダーは解釈しないため EPUB には出さない。
+    // コロフォンもここでは position:running（＝最終ページのフッターへ流す）を使うので
+    // PDF 専用。EPUB では最後の spine を丸ごと奥付にして出す（colophonCss を参照）。
     const pageCss = format === 'epub' ? '' : `@page {
   size: ${widthMm}mm ${heightMm}mm;
   margin-top: 10mm;
@@ -202,6 +202,19 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
   font-size: ${colophonFontPt}pt;
 }
 `;
+
+    // EPUB のコロフォン。リフロー型リーダーは position:running を解釈しないため、
+    // 最後の spine 文書を丸ごと奥付にして、その中に通常のブロックとして置く
+    // （本文の末尾に地の文として続くと読み物の途中に混ざってしまう）。
+    // 縦組みの本でもクレジットは欧文 1 行なので、この要素だけ横組みへ戻す
+    // （横組みの本では文書がもともと横組みなので、上書きは要らない）。
+    const colophonCss = format === 'epub' ? `
+/* 奥付（最後の spine 文書に単独で入る） */
+.atb-colophon {
+  ${isVertical ? '-epub-writing-mode: horizontal-tb;\n  writing-mode: horizontal-tb;\n  ' : ''}text-align: center;
+  font-size: 0.75em;
+}
+` : '';
 
     return `
 ${pageCss}${fontFaceCss}
@@ -325,7 +338,7 @@ ruby.atb-kenten > rt > span {
 .atb-tcy {
   ${tcyDecls}
 }
-`.trim();
+${colophonCss}`.trim();
 }
 
 // ---- 本体 ------------------------------------------------------------------
@@ -594,10 +607,11 @@ export function renderSections(nodes: ParsedNode[], config: PaperConfig): EpubSe
     }
     flush();
 
-    // コロフォンは入れない（PDF 専用）。リフロー型リーダーは position:running を解釈せず、
-    // 本文末尾に地の文として表示してしまうため。spine 0 件は EPUB として不正なので、
-    // 原稿が空でも文書を 1 つは作る。
-    if (sections.length === 0) sections.push([]);
+    // コロフォンは最後の spine 文書に単独で入れて奥付にする。
+    // 本文の流れの末尾に足すと（PDF と違って position:running が効かないぶん）読み物の
+    // 途中に地の文として混ざるため、1 文書＝1 ページの独立した奥付にする。
+    // これで spine が必ず 1 つ以上になるので、原稿が空でも EPUB として成立する。
+    sections.push([{ html: COLOPHON_HTML }]);
 
     // 目次の #id を、その見出しが入った spine ファイルへのクロスファイル参照に置き換える。
     const rewriteTocLinks = (html: string): string =>

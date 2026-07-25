@@ -16,6 +16,11 @@ function sections(src: string, config: PaperConfig = horizontal): string[] {
     return renderSections(parse(src), config).map(s => s.html);
 }
 
+// 最後の spine は奥付（クレジット）で固定なので、本文の分割だけを見るテストでは外す。
+function bodySections(src: string, config: PaperConfig = horizontal): string[] {
+    return sections(src, config).slice(0, -1);
+}
+
 // <body> の中身だけ取り出す。CSS のコメントやセレクタ名（例: 「最後」の「後」や
 // .atb-pagebreak）に本文判定が引っかからないようにするため。
 function bodyOf(doc: string): string {
@@ -323,8 +328,11 @@ describe('ページ設定 CSS', () => {
         // 「ノンブル・綴じ代・コロフォンは PDF 専用」どおり EPUB からは丸ごと外す。
         const epub = render(parse('文'), vertical, 'epub');
         expect(epub).not.toContain('@page');
-        expect(epub).not.toContain('atb-colophon');
         expect(epub).not.toContain('counter(page)');
+        // コロフォンの実体（render の PDF 出力）も EPUB には出さない。
+        // EPUB のクレジットは renderSections が最後の spine に単独で置く。
+        expect(epub).not.toContain('class="atb-colophon"');
+        expect(epub).not.toContain('position: running');
         const pdf = render(parse('文'), vertical, 'pdf');
         expect(pdf).toContain('@page');
         expect(pdf).toContain('.atb-colophon');
@@ -342,14 +350,14 @@ describe('ページ設定 CSS', () => {
 
 describe('EPUB の spine 分割（renderSections）', () => {
     it('改ページが無ければ 1 つの spine 文書になる', () => {
-        const s = sections('ひとつめ\nふたつめ');
+        const s = bodySections('ひとつめ\nふたつめ');
         expect(s).toHaveLength(1);
         expect(bodyOf(s[0]!)).toContain('ひとつめ');
         expect(bodyOf(s[0]!)).toContain('ふたつめ');
     });
 
     it('EPUB の空行 div は中身に &#160; を持ち、空ブロックで潰れて消えないようにする', () => {
-        const s = sections('前\n\n後');
+        const s = bodySections('前\n\n後');
         expect(bodyOf(s[0]!)).toContain('<div class="atb-blank">&#160;</div>');
     });
 
@@ -363,7 +371,7 @@ describe('EPUB の spine 分割（renderSections）', () => {
     });
 
     it('＠＠＠ で spine が分割され、改ページ用の div は残さない', () => {
-        const s = sections('前\n＠＠＠\n後');
+        const s = bodySections('前\n＠＠＠\n後');
         expect(s).toHaveLength(2);
         expect(bodyOf(s[0]!)).toContain('前');
         expect(bodyOf(s[0]!)).not.toContain('後');
@@ -374,7 +382,7 @@ describe('EPUB の spine 分割（renderSections）', () => {
     });
 
     it('大見出し（＠）は新しい spine から始まる', () => {
-        const s = sections('本文0\n＠あたらしい章\n本文2');
+        const s = bodySections('本文0\n＠あたらしい章\n本文2');
         expect(s).toHaveLength(2);
         expect(bodyOf(s[0]!)).toContain('本文0');
         expect(bodyOf(s[0]!)).not.toContain('あたらしい章');
@@ -383,7 +391,7 @@ describe('EPUB の spine 分割（renderSections）', () => {
     });
 
     it('目次（＠目次）は前後で分割され、単独の spine 文書になる', () => {
-        const s = sections('前文\n＠目次\n後文');
+        const s = bodySections('前文\n＠目次\n後文');
         expect(s).toHaveLength(3);
         expect(bodyOf(s[0]!)).toContain('前文');
         expect(bodyOf(s[1]!)).toContain('atb-toc-title');
@@ -392,18 +400,29 @@ describe('EPUB の spine 分割（renderSections）', () => {
         expect(bodyOf(s[2]!)).toContain('後文');
     });
 
-    it('コロフォンは EPUB には入れない（PDF 専用）', () => {
-        // リフロー型リーダーは position:running を解釈せず、コロフォンが本文末尾に
-        // 地の文として表示されてしまうため、EPUB の spine には入れない。
-        const s = sections('前\n＠＠＠\n後');
-        for (const doc of s) {
+    it('クレジットは最後の spine に単独で入る（奥付ページ）', () => {
+        // リフロー型リーダーは position:running を解釈しないため、本文の流れに足すと
+        // 読み物の途中に地の文として混ざる。1 文書＝1 ページの奥付として独立させる。
+        const all = sections('前\n＠＠＠\n後');
+        const colophon = all[all.length - 1]!;
+        expect(bodyOf(colophon)).toContain('atb-colophon');
+        expect(bodyOf(colophon)).toContain('Created with at-book');
+        // 本文側には混ざらない。
+        for (const doc of all.slice(0, -1)) {
             expect(bodyOf(doc)).not.toContain('atb-colophon');
         }
     });
 
+    it('本文が空でも spine は 0 件にならない（spine 0 件は EPUB として不正）', () => {
+        const all = sections('');
+        expect(all.length).toBeGreaterThan(0);
+        expect(bodyOf(all[all.length - 1]!)).toContain('atb-colophon');
+    });
+
     it('各 spine に連番のファイル名が付く', () => {
         const s = renderSections(parse('＠一\n本文\n＠二\n本文'), horizontal);
-        expect(s.map(x => x.fileName)).toEqual(['part-001.html', 'part-002.html']);
+        // 本文 2 つ + 奥付 1 つ。
+        expect(s.map(x => x.fileName)).toEqual(['part-001.html', 'part-002.html', 'part-003.html']);
     });
 
     it('目次リンクは、見出しが実在する spine ファイルへのクロスファイル参照になる', () => {

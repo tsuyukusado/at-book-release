@@ -20,9 +20,11 @@ describe('atbConverter（parse と render の結線）', () => {
 
     it('convertEpubSections は改ページ境界でファイル名付きの複数 spine に分割する', () => {
         const sections = atbConverter.convertEpubSections('前半\n＠＠＠\n後半', config);
-        expect(sections.length).toBe(2);
+        // 本文 2 つ + 末尾の奥付 1 つ。
+        expect(sections.length).toBe(3);
         expect(sections[0]!.fileName).not.toBe(sections[1]!.fileName);
         expect(sections[0]!.html).toContain('前半');
         expect(sections[1]!.html).toContain('後半');
+        expect(sections[2]!.html).toContain('atb-colophon');
     });
 });

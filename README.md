@@ -50,10 +50,13 @@ npm install --save-dev github:tsuyukusado/at-book-release
 
 **3. 原稿と設定ファイルを置く**
 
-原稿を入れるフォルダ（ここでは `doc`）を作り、**同じフォルダに** `at-book.config.json` を置きます。
+原稿を入れるフォルダ（ここでは `doc`）を作り、**同じフォルダで** `at-book init` を実行すると、初期値の `at-book.config.json` が生成されます。
 
 ```sh
 mkdir doc
+cd doc
+npx at-book init
+cd ..
 ```
 
 `doc/at-book.config.json`
@@ -65,6 +68,8 @@ mkdir doc
   "autoGenerate": ["your-novel.atb"]
 }
 ```
+
+すでに `at-book.config.json` がある場所で実行すると、上書きせずにエラーになります。
 
 `doc/your-novel.atb` に小説を書きます。使う記法は「＠マーク」だけ。
 
@@ -235,6 +240,15 @@ my-novel/
 ```
 
 本文用紙・表紙用紙それぞれの厚さを mm で指定します。両方を設定すると、本文PDFと同時に `<原稿のフォルダ>/dist/<名前>-hyoshi.svg`（背幅・塗り足しガイド入り）が生成されます。
+
+## 設定ファイルを初期生成する
+
+```sh
+npx at-book init
+# → カレントフォルダに at-book.config.json が生成される
+```
+
+原稿を入れるフォルダで実行してください。既に `at-book.config.json` がある場所では上書きせずエラーになります。
 
 ## 手動でPDF生成を実行する
 

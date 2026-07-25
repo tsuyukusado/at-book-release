@@ -4,3 +4,4 @@ export type { FileWriter, GenerateCoverTemplatePorts, GenerateCoverTemplateInput
 export { generateCoverTemplate } from "./generateCoverTemplate";
 export type { ConvertAtbToWebPorts, ConvertAtbToWebInput, ConvertAtbToWebOutput } from "./convertAtbToWeb";
 export { convertAtbToWeb } from "./convertAtbToWeb";
+export { buildDefaultConfigContent } from "./initConfig";

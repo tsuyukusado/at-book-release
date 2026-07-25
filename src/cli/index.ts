@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as path from "path";
 import { readFileSync, statSync } from "fs";
-import { convertAtb, convertAtbToWeb } from "../usecase";
+import { convertAtb, convertAtbToWeb, buildDefaultConfigContent } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
 import { nodeFileReader, vivliostyleRunner, nodeConfigReader, nodeFileWriter, findConfigDirs } from "../infrastructure";
@@ -143,6 +143,25 @@ async function runWeb(atbPathArg: string): Promise<void> {
 
 const CONFIG_FILE_NAME = 'at-book.config.json';
 
+// カレントディレクトリに初期設定ファイルを配置する。
+// 原稿と同じフォルダに at-book.config.json を置く運用（README クイックスタート）なので、
+// 原稿フォルダに cd してから実行することを想定している。
+async function runInit(): Promise<void> {
+    const configPath = path.resolve(CONFIG_FILE_NAME);
+
+    try {
+        statSync(configPath);
+        console.error(`エラー: ${configPath} は既に存在します。上書きは行いません。`);
+        process.exit(1);
+    } catch {
+        // 存在しない場合のみ続行する。
+    }
+
+    await nodeFileWriter.write(configPath, buildDefaultConfigContent());
+    console.log(`生成完了: ${configPath}`);
+    console.log('  autoGenerate に組版したい原稿のファイル名を書いてください。');
+}
+
 // 設定ファイル1つ分（＝作品1つ分）をビルドする。
 // autoGenerate が無ければ何もせず false を返す。
 async function buildConfigDir(configDir: string): Promise<boolean> {
@@ -220,7 +239,9 @@ async function main(): Promise<void> {
         return;
     }
 
-    if (subcommand === "cover") {
+    if (subcommand === "init") {
+        await runInit();
+    } else if (subcommand === "cover") {
         await runCover(rest);
     } else if (subcommand === "web") {
         const fileArg = rest.find(a => !a.startsWith("--"));

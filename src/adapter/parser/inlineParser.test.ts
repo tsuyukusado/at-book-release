@@ -206,3 +206,43 @@ describe('！／？のあとに文章が続く場合の全角スペース', () =
         expect(nodes).toEqual([{ kind: 'text', text: 'すき♥　だいすき' }]);
     });
 });
+
+describe('ルビ・圏点・三点リーダ・縦中横', () => {
+    it('＠漢字（かんじ） は ruby（text=漢字, ruby=かんじ）になる', () => {
+        expect(parseInline('＠漢字（かんじ）')).toEqual([
+            expect.objectContaining({ kind: 'ruby', text: '漢字', ruby: 'かんじ' }),
+        ]);
+    });
+
+    it('＠強調（・） は kenten（読みが ・ の特例）になる', () => {
+        expect(parseInline('＠強調（・）')).toEqual([
+            expect.objectContaining({ kind: 'kenten', text: '強調' }),
+        ]);
+    });
+
+    it('・・ は ellipsis level 2 になる', () => {
+        expect(parseInline('・・')).toEqual([
+            expect.objectContaining({ kind: 'ellipsis', level: 2 }),
+        ]);
+    });
+
+    it('！！・？？・！？・？！ は順不同で縦中横になる', () => {
+        for (const s of ['！！', '？？', '！？', '？！']) {
+            expect(parseInline(s)).toEqual([
+                expect.objectContaining({ kind: 'tatechuyoko', text: s }),
+            ]);
+        }
+    });
+
+    it('マークアップ無しのテキストは text 1 ノードになる', () => {
+        expect(parseInline('ただの文章')).toEqual([{ kind: 'text', text: 'ただの文章' }]);
+    });
+
+    it('テキスト＋ルビ＋テキストの混在は、前後のテキストが分割され順序を保つ', () => {
+        expect(parseInline('その＠瞳（ひとみ）は青い')).toEqual([
+            { kind: 'text', text: 'その' },
+            expect.objectContaining({ kind: 'ruby', text: '瞳', ruby: 'ひとみ' }),
+            { kind: 'text', text: 'は青い' },
+        ]);
+    });
+});

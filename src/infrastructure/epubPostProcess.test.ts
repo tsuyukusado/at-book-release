@@ -79,4 +79,35 @@ describe('injectPrimaryWritingMode', () => {
         const count = opf.split('primary-writing-mode').length - 1;
         expect(count).toBe(1);
     });
+
+    it('OPF に </metadata> が無ければ何もしない（素通し）', async () => {
+        const opfWithoutMetadata = '<package><manifest></manifest></package>';
+        await buildMinimalEpub(epub, opfWithoutMetadata);
+        await injectPrimaryWritingMode(epub, 'vertical-rl');
+        const { opf } = await readEpub(epub);
+        expect(opf).toBe(opfWithoutMetadata);
+        expect(opf).not.toContain('primary-writing-mode');
+    });
+
+    it('mimetype やディレクトリエントリの無い・有る EPUB でも再梱包できる', async () => {
+        // mimetype を持たず、ディレクトリエントリを含む zip でも落ちずに注入できること。
+        await new Promise<void>((resolve, reject) => {
+            const output = createWriteStream(epub);
+            const archive = archiver('zip', { zlib: { level: 9 } });
+            output.on('close', () => resolve());
+            archive.on('error', reject);
+            archive.pipe(output);
+            archive.append(Buffer.alloc(0), { name: 'EPUB/' });
+            archive.append(OPF, { name: 'EPUB/content.opf' });
+            archive.finalize();
+        });
+        await injectPrimaryWritingMode(epub, 'vertical-rl');
+
+        const zip = new StreamZip.async({ file: epub });
+        const opf = (await zip.entryData('EPUB/content.opf')).toString('utf-8');
+        const names = Object.keys(await zip.entries());
+        await zip.close();
+        expect(opf).toContain('primary-writing-mode');
+        expect(names).not.toContain('mimetype');
+    });
 });

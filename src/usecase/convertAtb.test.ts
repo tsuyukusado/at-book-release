@@ -107,4 +107,10 @@ describe('convertAtb のフォーマット振り分け', () => {
         expect(out.pageCount).toBe(0);
         expect(out.formats).toEqual(['web']);
     });
+
+    it('総文字数（charCount）は読み込んだ本文の文字数を返す', async () => {
+        const { deps } = makeDeps(base); // fileReader は「あいうえお」を返す
+        const out = await convertAtb(deps, { atbPath: 'doc/test.atb', outDir: 'doc/dist' });
+        expect(out.charCount).toBe(5);
+    });
 });

@@ -17,6 +17,7 @@
     "build": "npm run clean && tsc",
     "start": "node dist/cli/index.js",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "setup": "npm run build && npm link",
     "prepare": "npm run build"
   },
@@ -49,6 +50,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   }

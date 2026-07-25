@@ -2,5 +2,7 @@ node_modules/
 dist/
 # npm pack の生成物（配布用 tarball）
 *.tgz
+# vitest のカバレッジレポート
+coverage/
 CLAUDE.md
 .claude/

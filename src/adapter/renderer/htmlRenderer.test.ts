@@ -412,3 +412,40 @@ describe('EPUB の spine 分割（renderSections）', () => {
         expect(pdf).not.toContain('.xhtml#atb-h1');
     });
 });
+
+describe('用紙サイズごとの @page size', () => {
+    it('a4 は 210mm 297mm', () => {
+        expect(html('本文', { paperSize: 'a4', writingMode: 'horizontal' })).toContain('size: 210mm 297mm');
+    });
+
+    it('a5 は 148mm 210mm', () => {
+        expect(html('本文', { paperSize: 'a5', writingMode: 'horizontal' })).toContain('size: 148mm 210mm');
+    });
+
+    it('b5 は 182mm 257mm', () => {
+        expect(html('本文', { paperSize: 'b5', writingMode: 'horizontal' })).toContain('size: 182mm 257mm');
+    });
+});
+
+describe('章番号の漢数字（10 以上）', () => {
+    it('10 以上の章番号も正しい漢数字になる（十・十二・二十・二十一）', () => {
+        const src = Array.from({ length: 21 }, () => '＠章').join('\n');
+        const out = bodyOf(html(src, vertical));
+        expect(out).toContain('十二');
+        expect(out).toContain('二十一');
+        // 10・20 ちょうど（一の位ゼロ）は末尾に余計な数字が付かない。
+        expect(out).toContain('十');
+        expect(out).toContain('二十');
+    });
+});
+
+describe('リストの入れ子の閉じ', () => {
+    it('深いリストから浅いリストへ戻るとき ul を閉じる', () => {
+        const src = '・親その一\n　・子ども\n・親その二';
+        const out = bodyOf(html(src, horizontal));
+        expect(out.split('<ul class="atb-list">').length - 1).toBe(2);
+        expect(out.split('</ul>').length - 1).toBe(2);
+        // 2 番目の親項目は入れ子の外（子リストの閉じの後）に来る。
+        expect(out.indexOf('親その二')).toBeGreaterThan(out.indexOf('</ul>'));
+    });
+});

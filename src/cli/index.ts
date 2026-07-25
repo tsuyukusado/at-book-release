@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as path from "path";
+import { readFileSync } from "fs";
 import { execSync } from "child_process";
 import { convertAtb, convertAtbToWeb } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
@@ -289,10 +290,28 @@ async function runWeb(atbPath: string): Promise<void> {
     }
 }
 
-async function main(): Promise<void> {
-    ensureHookInstalled();
+// パッケージ自身のバージョンを読む。__dirname は dist/cli なので二つ上がパッケージルート。
+function readVersion(): string {
+    try {
+        const pkgPath = path.join(__dirname, '..', '..', 'package.json');
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string };
+        return pkg.version ?? 'unknown';
+    } catch {
+        return 'unknown';
+    }
+}
 
+async function main(): Promise<void> {
     const [subcommand, ...rest] = process.argv.slice(2);
+
+    // --version は post-commit フックの「at-book が入っているか」判定にも使われる。
+    // 副作用なく即座に応答する必要があるため、ensureHookInstalled() より前に処理する。
+    if (subcommand === "--version" || subcommand === "-v") {
+        console.log(readVersion());
+        return;
+    }
+
+    ensureHookInstalled();
 
     if (!subcommand) {
         const configDirs = await findConfigDirs('.');

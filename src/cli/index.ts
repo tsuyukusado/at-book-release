@@ -6,6 +6,7 @@ import { convertAtb, convertAtbToWeb } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
 import { nodeFileReader, vivliostyleRunner, readPdfPageCount, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs, appendCharCount, readCountState, writeCountState } from "../infrastructure";
+import type { CountState } from "../infrastructure";
 import { countChars } from "../usecase/countChars";
 
 // git コマンドを実行。失敗時（gitリポジトリでない・対象が存在しない等）は undefined を返す。
@@ -68,7 +69,9 @@ async function runCover(args: string[]): Promise<void> {
         process.exit(1);
     }
 
-    const outputPath = outputArg ?? path.join('dist', 'at-book', 'cover-template.svg');
+    // 原稿を伴わない単体実行なので、作品ディレクトリが定まらない。
+    // 出力先はカレントディレクトリ基準（または引数で明示）とする。
+    const outputPath = outputArg ?? path.join('dist', 'cover-template.svg');
 
     const { svgPath } = await generateCoverTemplate(
         { fileWriter: nodeFileWriter },
@@ -91,8 +94,33 @@ async function runCover(args: string[]): Promise<void> {
     console.log(`  背幅       : ${Math.round(spineWidth * 100) / 100}mm`);
 }
 
-const CHAR_COUNT_LOG = path.join('dist', 'at-book', 'char-count.log');
-const COUNT_STATE_FILE = path.join('dist', 'at-book', '.at-book-count.state');
+// 1作品ぶんのパス解決結果。
+//
+// 出力先は「設定ファイル（＝原稿）のあるディレクトリ」を基準に決める。カレント
+// ディレクトリ基準にすると、同じ原稿でもどこから実行したかで出力場所が変わってしまう
+// （さらに従来はリポジトリルート以外から実行すると読み込み自体が失敗していた）。
+// 設定ファイル 1 つ＝作品 1 つと捉え、その隣に成果物を置く。
+interface Work {
+    // 原稿の実ファイルパス（絶対）。読み込みと出力ファイル名の元になる。
+    atbPath:  string;
+    // 成果物の出力先（絶対）。<原稿のあるディレクトリ>/dist。
+    outDir:   string;
+    // git 操作（show / diff）とログ上の識別子に使うリポジトリルート相対パス。
+    // git 管理外なら実パスのまま。
+    repoPath: string;
+}
+
+function resolveWork(atbPathArg: string): Work {
+    const atbPath = path.resolve(atbPathArg);
+    return {
+        atbPath,
+        outDir:   path.join(path.dirname(atbPath), 'dist'),
+        repoPath: toRepoRelativePath(atbPath),
+    };
+}
+
+const charCountLogOf   = (outDir: string) => path.join(outDir, 'char-count.log');
+const countStateFileOf = (outDir: string) => path.join(outDir, '.at-book-count.state');
 
 // 履歴ウォーク: 初回は全コミット、以降は前回処理した続きから新着コミットだけを処理し、
 // 各コミットで変更された .atb の文字数と「前回コミットからの差分」を char-count.log に記録する。
@@ -103,25 +131,39 @@ async function runCountHistory(): Promise<void> {
         console.error("エラー: gitリポジトリではないか、コミットがまだありません。");
         process.exit(1);
     }
+    const repoRoot = git("rev-parse --show-toplevel")?.trim();
+    if (!repoRoot) {
+        console.error("エラー: gitリポジトリのルートを特定できませんでした。");
+        process.exit(1);
+    }
 
-    const state = await readCountState(COUNT_STATE_FILE);
-    const firstRun = !state.lastCommit;
-    const range = state.lastCommit ? `${state.lastCommit}..HEAD` : "HEAD";
-
-    const revList = git(`rev-list --reverse ${range}`);
+    // 記録先は作品ごと（＝原稿の隣の dist/）なので、進捗の基準となる lastCommit も
+    // 作品ごとに持つ。全コミットを古い順に走査し、作品ごとに「前回記録した位置」を
+    // 追い越してから記録を始める。全作品ぶんの状態を1つのファイルに集約すると、
+    // 出力先を作品ごとに分けた意味が無くなるため、この形にしている。
+    const revList = git("rev-list --reverse HEAD");
     if (revList === undefined) {
         console.error("エラー: コミット履歴を取得できませんでした。");
         process.exit(1);
     }
     const commits = revList.split("\n").map(s => s.trim()).filter(Boolean);
 
-    if (commits.length === 0) {
-        console.log("新着コミットはありません。");
-        return;
+    // 作品（出力先ディレクトリ）ごとの状態。ファイル I/O を繰り返さないよう保持する。
+    type WorkState = { work: Work; state: CountState; active: boolean; touched: boolean };
+    const works = new Map<string, WorkState>();
+
+    async function workStateOf(repoRelAtbPath: string): Promise<WorkState> {
+        const work = resolveWork(path.join(repoRoot!, repoRelAtbPath));
+        const key = work.outDir;
+        let ws = works.get(key);
+        if (!ws) {
+            const state = await readCountState(countStateFileOf(work.outDir));
+            // 未記録の作品は最初から、記録済みなら lastCommit を追い越すまで待つ。
+            ws = { work, state, active: !state.lastCommit, touched: false };
+            works.set(key, ws);
+        }
+        return ws;
     }
-    console.log(firstRun
-        ? `初回実行: 全 ${commits.length} 件のコミットを処理します...`
-        : `新着 ${commits.length} 件のコミットを処理します...`);
 
     let logged = 0;
     for (const commit of commits) {
@@ -134,46 +176,66 @@ async function runCountHistory(): Promise<void> {
         const date = isoDate ? new Date(isoDate) : undefined;
 
         for (const atbPath of changed) {
+            const ws = await workStateOf(atbPath);
+            if (!ws.active) {
+                // このコミットが前回の記録位置なら、次のコミットから記録を再開する。
+                if (ws.state.lastCommit === commit) ws.active = true;
+                continue;
+            }
+
             const curText = gitShow(commit, atbPath);
             if (curText === undefined) continue;
             const charCount = countChars(curText);
             const { charDiff, isNew } = charDiffFromParent(commit, atbPath, charCount);
 
-            await appendCharCount(CHAR_COUNT_LOG, {
+            await appendCharCount(charCountLogOf(ws.work.outDir), {
                 atbPath, charCount, commitHash: commit, commitMessage: message,
                 charDiff, isNew, date,
             });
 
             const diffStr = isNew ? "新規" : `前回比 ${charDiff! >= 0 ? "+" : ""}${charDiff!.toLocaleString("ja-JP")}文字`;
             console.log(`  ${commit.slice(0, 7)} ${atbPath}: ${charCount.toLocaleString("ja-JP")}文字 (${diffStr})`);
+            ws.state.chars[atbPath] = charCount;
+            ws.touched = true;
             logged++;
         }
     }
 
-    state.lastCommit = head;
-    await writeCountState(COUNT_STATE_FILE, state);
-    console.log(`完了: ${logged} 件を ${CHAR_COUNT_LOG} に記録しました。`);
+    if (logged === 0) {
+        console.log("新たに記録するコミットはありません。");
+        return;
+    }
+
+    for (const ws of works.values()) {
+        if (!ws.touched) continue;
+        ws.state.lastCommit = head;
+        await writeCountState(countStateFileOf(ws.work.outDir), ws.state);
+        console.log(`記録: ${charCountLogOf(ws.work.outDir)}`);
+    }
+    console.log(`完了: ${logged} 件を記録しました。`);
 }
 
-async function readExistingPageCount(atbPath: string): Promise<number | undefined> {
-    const base = path.basename(atbPath, '.atb');
-    const pdfPath = path.join('dist', 'at-book', `${base}-honbun.pdf`);
-    return readPdfPageCount(pdfPath);
+async function readExistingPageCount(work: Work): Promise<number | undefined> {
+    const base = path.basename(work.atbPath, '.atb');
+    return readPdfPageCount(path.join(work.outDir, `${base}-honbun.pdf`));
 }
 
-async function runCountChars(atbPath: string, opts: { fromCommit?: boolean } = {}): Promise<void> {
-    atbPath = toRepoRelativePath(atbPath);
+async function runCountChars(atbPathArg: string, opts: { fromCommit?: boolean } = {}): Promise<void> {
+    const work = resolveWork(atbPathArg);
+    // 読み込みは実ファイルパス、git 操作はリポジトリ相対パスと使い分ける。
+    // 両者を同じ変数に詰めると、リポジトリルート以外から実行したときに破綻する。
+    const atbPath = work.repoPath;
     let atbText: string;
     if (opts.fromCommit) {
         // post-commit フックなど: コミットされた版（HEAD）の内容を数える
         try {
-            atbText = execSync(`git show HEAD:${atbPath}`, { encoding: 'utf-8' });
+            atbText = execSync(`git show HEAD:${work.repoPath}`, { encoding: 'utf-8' });
         } catch {
-            atbText = await nodeFileReader.read(atbPath);
+            atbText = await nodeFileReader.read(work.atbPath);
         }
     } else {
         // 手動実行: 作業ツリーのローカル内容を数える
-        atbText = await nodeFileReader.read(atbPath);
+        atbText = await nodeFileReader.read(work.atbPath);
     }
 
     let commitHash: string | undefined;
@@ -184,9 +246,9 @@ async function runCountChars(atbPath: string, opts: { fromCommit?: boolean } = {
     } catch {}
 
     const charCount = countChars(atbText);
-    const pageCount = await readExistingPageCount(atbPath);
+    const pageCount = await readExistingPageCount(work);
 
-    const state = await readCountState(COUNT_STATE_FILE);
+    const state = await readCountState(countStateFileOf(work.outDir));
     // 差分の基準: フック実行は親コミット(HEAD~1)と、手動実行は現在のコミット(HEAD)と比較する
     const baseRef = opts.fromCommit ? "HEAD~1" : "HEAD";
     const { charDiff, isNew } = commitHash
@@ -198,11 +260,11 @@ async function runCountChars(atbPath: string, opts: { fromCommit?: boolean } = {
     const charDiffStr = isNew ? " (新規)" : charDiff !== undefined ? ` (前回比 ${charDiff >= 0 ? "+" : ""}${charDiff.toLocaleString("ja-JP")}文字)` : "";
     console.log(`文字数: ${charCount.toLocaleString('ja-JP')}文字${charDiffStr} (${atbPath})`);
     if (pageCount !== undefined) console.log(`ページ数: ${pageCount}p`);
-    await appendCharCount(CHAR_COUNT_LOG, { atbPath, charCount, pageCount, commitHash, commitMessage, charDiff, pageDiff, isNew });
+    await appendCharCount(charCountLogOf(work.outDir), { atbPath, charCount, pageCount, commitHash, commitMessage, charDiff, pageDiff, isNew });
 
     state.chars[atbPath] = charCount;
     if (pageCount !== undefined && pageCount > 0) state.pages[atbPath] = pageCount;
-    await writeCountState(COUNT_STATE_FILE, state);
+    await writeCountState(countStateFileOf(work.outDir), state);
 }
 
 // 絶対パスをリポジトリルート相対パスに変換する。git show の ref:path 記法は絶対パスを受け付けないため。
@@ -213,8 +275,10 @@ function toRepoRelativePath(p: string): string {
     return path.relative(repoRoot, abs);
 }
 
-async function runConvert(atbPath: string): Promise<void> {
-    atbPath = toRepoRelativePath(atbPath);
+async function runConvert(atbPathArg: string): Promise<void> {
+    const work = resolveWork(atbPathArg);
+    // ログ上の識別子はリポジトリ相対パス。作業ツリーのどこから実行しても同じキーになる。
+    const atbPath = work.repoPath;
     const { pdfPath, epubPath, pageCount, charCount, formats, config } = await convertAtb(
         {
             converter:    atbConverter,
@@ -222,17 +286,18 @@ async function runConvert(atbPath: string): Promise<void> {
             pdfRunner:    vivliostyleRunner,
             configReader: nodeConfigReader,
         },
-        { atbPath, outDir: path.join('dist', 'at-book') }
+        { atbPath: work.atbPath, outDir: work.outDir }
     );
     if (pdfPath)  console.log(`生成完了: ${pdfPath}`);
     if (epubPath) console.log(`生成完了: ${epubPath}`);
     // web はプレーンテキストで HTML 経路を通らないため、ここで別途出力する。
-    if (formats.includes('web')) await runWeb(atbPath);
+    if (formats.includes('web')) await runWeb(work.atbPath);
     console.log(`  総文字数 : ${charCount.toLocaleString('ja-JP')}文字`);
 
     // 差分を算出してログに記録する。
     //   文字数・ページ数ともに前回記録時の値（状態ファイル）との差分
-    const state = await readCountState(COUNT_STATE_FILE);
+    const stateFile = countStateFileOf(work.outDir);
+    const state = await readCountState(stateFile);
     const commitHash = git("rev-parse HEAD")?.trim();
     const commitMessage = commitHash ? git("log -1 --format=%s")?.trim() : undefined;
     const prevChar = state.chars[atbPath];
@@ -240,7 +305,7 @@ async function runConvert(atbPath: string): Promise<void> {
     const prevPage = state.pages[atbPath];
     const pageDiff = (prevPage !== undefined && pageCount > 0) ? pageCount - prevPage : undefined;
 
-    await appendCharCount(CHAR_COUNT_LOG, {
+    await appendCharCount(charCountLogOf(work.outDir), {
         atbPath, charCount, pageCount,
         charDiff, pageDiff, isNew: false, commitHash, commitMessage,
     });
@@ -248,12 +313,12 @@ async function runConvert(atbPath: string): Promise<void> {
     state.chars[atbPath] = charCount;
     if (pageCount > 0) state.pages[atbPath] = pageCount;
     if (commitHash) state.lastCommit = commitHash;
-    await writeCountState(COUNT_STATE_FILE, state);
+    await writeCountState(stateFile, state);
 
     const { bodyPaperThicknessMm, coverPaperThicknessMm } = config;
     if (bodyPaperThicknessMm && coverPaperThicknessMm && pageCount > 0) {
-        const base      = path.basename(atbPath, '.atb');
-        const coverPath = path.join('dist', 'at-book', `${base}-hyoshi.svg`);
+        const base      = path.basename(work.atbPath, '.atb');
+        const coverPath = path.join(work.outDir, `${base}-hyoshi.svg`);
         const { svgPath } = await generateCoverTemplate(
             { fileWriter: nodeFileWriter },
             {
@@ -275,12 +340,12 @@ async function runConvert(atbPath: string): Promise<void> {
 
 // atb をウェブ投稿用テキストへ変換する。
 // 見出しで「作品フォルダ / 章フォルダ / 話ファイル(.txt)」に分割して出力する。
-async function runWeb(atbPath: string): Promise<void> {
-    atbPath = toRepoRelativePath(atbPath);
-    const outDir = path.join('dist', 'at-book', 'web');
+async function runWeb(atbPathArg: string): Promise<void> {
+    const work = resolveWork(atbPathArg);
+    const outDir = path.join(work.outDir, 'web');
     const { bookDir, export: result, writtenPaths } = await convertAtbToWeb(
         { fileReader: nodeFileReader, fileWriter: nodeFileWriter },
-        { atbPath, outDir },
+        { atbPath: work.atbPath, outDir },
     );
     console.log(`ウェブ投稿用に変換しました: ${bookDir}`);
     console.log(`  作品フォルダ : ${result.folderName}`);

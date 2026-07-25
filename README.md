@@ -68,7 +68,7 @@ git add .
 git commit -m "執筆開始"
 ```
 
-コミットした瞬間、`dist/at-book` フォルダに**印刷用 PDF が自動生成**されます。あなたがすることは、もう書くことだけです。
+コミットした瞬間、**原稿と同じフォルダの `dist/` に印刷用 PDF が自動生成**されます。あなたがすることは、もう書くことだけです。
 
 > 初回の PDF 生成時のみ、組版用のヘッドレスブラウザ（数百 MB）が自動ダウンロードされます。ネットワークに接続した状態で最初の生成を行ってください。
 
@@ -297,10 +297,27 @@ npx at-book doc/your-novel.atb
 
 ```
 my-novel/
-├── doc/
-│   ├── at-book.config.json   ← ここ
-│   └── your-novel.atb
-└── dist/at-book/             ← 生成物はここに出る
+├── .gitignore
+└── doc/
+    ├── at-book.config.json   ← ここ
+    ├── your-novel.atb
+    └── dist/                 ← 生成物はここに出る
+```
+
+作品が 2 つあるなら、こうなります。設定ファイルごとに独立しているので、原稿のファイル名が同じでもぶつかりません。
+
+```
+my-novel/
+├── .gitignore
+└── novel/
+    ├── 001/manuscript/
+    │   ├── at-book.config.json
+    │   ├── manuscript.atb
+    │   └── dist/             ← 001 の生成物
+    └── 002/manuscript/
+        ├── at-book.config.json
+        ├── manuscript.atb
+        └── dist/             ← 002 の生成物
 ```
 
 指定できる項目は次のとおりです。
@@ -328,21 +345,21 @@ my-novel/
 
 ## 生成されたファイルの場所
 
-生成物はすべて `dist/at-book/` 以下に保存されます。ファイル名は原稿のファイル名から作られます（`your-novel.atb` なら `your-novel-honbun.pdf`）。
+生成物は**原稿と同じフォルダの `dist/` 以下**に保存されます。ファイル名は原稿のファイル名から作られます（`your-novel.atb` なら `your-novel-honbun.pdf`）。
+
+出力先が原稿の位置で決まるので、**どのフォルダから実行しても同じ場所に出ます**。別々のフォルダにある同名の原稿どうしがぶつかることもありません。
 
 | ファイル | 内容 |
 |---|---|
-| `dist/at-book/<名前>-honbun.pdf` | 本文PDF |
-| `dist/at-book/<名前>.epub` | EPUB |
-| `dist/at-book/<名前>-hyoshi.svg` | 表紙テンプレート |
-| `dist/at-book/web/<作品フォルダ>/` | ウェブ投稿用テキスト |
-| `dist/at-book/char-count.log` | 文字数・ページ数の記録 |
+| `<原稿のフォルダ>/dist/<名前>-honbun.pdf` | 本文PDF |
+| `<原稿のフォルダ>/dist/<名前>.epub` | EPUB |
+| `<原稿のフォルダ>/dist/<名前>-hyoshi.svg` | 表紙テンプレート |
+| `<原稿のフォルダ>/dist/web/<作品フォルダ>/` | ウェブ投稿用テキスト |
+| `<原稿のフォルダ>/dist/char-count.log` | 文字数・ページ数の記録 |
 
 生成結果が気になる時は、随時確認しましょう。
 
-> **`dist/` は `.gitignore` に入れてください。** 組版の途中でフォントの実体（17MB）が `dist/at-book/` にコピーされるため、そのままだとリポジトリが重くなります。
-
-> **原稿のファイル名は作品ごとに変えてください。** 出力名は原稿のファイル名から決まるため、別フォルダでも同じ `manuscript.atb` という名前だと、生成物が同じ `manuscript-honbun.pdf` になって上書きされてしまいます。
+> **`dist/` は `.gitignore` に入れてください。** 組版の途中でフォントの実体（17MB）が `dist/` にコピーされるため、そのままだとリポジトリが重くなります。`dist/` と書いておけば、どの階層の `dist/` にも効きます。
 
 ## PDF生成の設定を変更する
 
@@ -374,9 +391,9 @@ PDF生成時の、紙の大きさと縦書きか横書きかは変更するこ�
 - `["pdf", "web"]` … PDFに加えて、ウェブ投稿用テキストも生成します。
 - 未指定（項目なし）… 従来どおりPDFのみを生成します。
 
-`web` を含めると、後述の [ウェブ投稿用のテキストに変換する](#ウェブ投稿用のテキストに変換する) と同じ内容が `dist/at-book/web/` 以下に生成されます（`npx at-book web <file.atb>` を実行するのと同じ結果です）。
+`web` を含めると、後述の [ウェブ投稿用のテキストに変換する](#ウェブ投稿用のテキストに変換する) と同じ内容が `<原稿のフォルダ>/dist/web/` 以下に生成されます（`npx at-book web <file.atb>` を実行するのと同じ結果です）。
 
-生成されたEPUBは `dist/at-book/<ファイル名>.epub` に保存されます。ルビ・圏点・縦書きはそのまま引き継がれます。
+生成されたEPUBは `<原稿のフォルダ>/dist/<ファイル名>.epub` に保存されます。ルビ・圏点・縦書きはそのまま引き継がれます。
 
 改ページ（`＠＠＠`）・大見出し（`＠`）・目次（`＠目次`）の区切りでは、EPUB内部を独立したファイル（spine）に分割します。リフロー型EPUBはCSSの改ページ指定を無視するため、区切りごとにファイルを分けることで、どの電子書籍リーダーでも確実に改ページされます。
 
@@ -400,24 +417,31 @@ PDF生成時の、紙の大きさと縦書きか横書きかは変更するこ�
 | `bodyPaperThicknessMm` | 本文用紙の厚さ（mm）例: `0.09` |
 | `coverPaperThicknessMm` | 表紙用紙の厚さ（mm）例: `0.35` |
 
-両方設定した状態でコミットすると、本文PDFと同時に `dist/at-book/<名前>-hyoshi.svg`（背幅・塗り足しガイド入り）が自動生成されます。
+両方設定した状態でコミットすると、本文PDFと同時に `<原稿のフォルダ>/dist/<名前>-hyoshi.svg`（背幅・塗り足しガイド入り）が自動生成されます。
 
 ## 手動でPDF生成を実行する
 
 上述した全ての自動生成機能は、コマンドを使って手動で生成する事も可能です。
 
-### 本文PDFと表紙テンプレートをまとめて生成する場合
+### ビルドする対象を指定する
+
+原稿・設定ファイル・フォルダのいずれでも指定できます。どれも「設定ファイルを起点に作品を特定する」同じ操作です。
 
 ```sh
-npx at-book doc/sample.atb
-# → dist/at-book/sample-honbun.pdf が生成される
+npx at-book                                     # カレントフォルダ配下を全部
+npx at-book novel/001                           # そのフォルダ配下を全部
+npx at-book novel/001/manuscript/at-book.config.json   # その設定ファイルの分だけ
+npx at-book doc/sample.atb                      # その原稿だけ
+# → doc/dist/sample-honbun.pdf が生成される
 ```
+
+フォルダを指定した場合は、その配下にある `at-book.config.json` を再帰的に探して、`autoGenerate` に書かれた原稿をまとめて組みます。作品が増えても「この作品だけ組み直す」ができます。
 
 ### 表紙テンプレートをページ数指定で単体生成する場合
 
 ```sh
 npx at-book cover 160 0.09 0.35
-# → dist/at-book/cover-template.svg が生成される
+# → dist/cover-template.svg が生成される
 ```
 
 引数は順に「ページ数」「本文用紙の厚さ（mm）」「表紙用紙の厚さ（mm）」です。
@@ -426,7 +450,7 @@ npx at-book cover 160 0.09 0.35
 
 ```sh
 npx at-book count doc/sample.atb
-# → 文字数とページ数を表示し、dist/at-book/char-count.log に追記する
+# → 文字数とページ数を表示し、doc/dist/char-count.log に追記する
 ```
 
 ## ウェブ投稿用のテキストに変換する
@@ -435,7 +459,7 @@ npx at-book count doc/sample.atb
 
 ```sh
 npx at-book web doc/sample.atb
-# → dist/at-book/web/<作品フォルダ>/ 以下にテキストが生成される
+# → doc/dist/web/<作品フォルダ>/ 以下にテキストが生成される
 ```
 
 設定ファイルの `formats` に `web` を加えれば、PDF などと同時に自動生成することもできます（[EPUB（電子書籍）を生成する](#epub電子書籍を生成する) を参照）。
@@ -474,7 +498,7 @@ npx at-book web doc/sample.atb
 
 ## 生成に失敗する
 
-VS Code などからコミットした場合、生成はバックグラウンドで動きます。結果は `dist/at-book/.at-book-generate.log` に記録されているので、そちらを確認してください。
+VS Code などからコミットした場合、生成はバックグラウンドで動きます。結果はリポジトリルートの `dist/.at-book-generate.log` に記録されているので、そちらを確認してください。
 
 # ＠本自体を開発する方へ
 

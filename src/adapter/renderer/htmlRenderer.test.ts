@@ -244,7 +244,10 @@ describe('ページ設定 CSS', () => {
         expect(epub).toContain('text-combine-upright: all;');
         expect(epub).toContain('-epub-text-combine-upright: all;');
         expect(epub).toContain('-webkit-text-combine: horizontal;');
-        expect(epub).toContain('text-combine: horizontal;');
+        expect(epub).toContain('-epub-text-combine: horizontal;');
+        // 無接頭辞の text-combine は実装するリーダーが無い草案時代のプロパティで、
+        // EPUBCheck の CSS 警告になるだけなので出さない。
+        expect(epub).not.toMatch(/[^-]text-combine:\s*horizontal/);
         // PDF(Vivliostyle) は標準構文で足りるので EPUB 専用の互換構文は出さない。
         const pdf = render(parse('本当に！？'), vertical, 'pdf');
         expect(pdf).toContain('text-combine-upright: all;');

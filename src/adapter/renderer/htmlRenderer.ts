@@ -128,9 +128,11 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
     const colophonFontPt = fitColophonFontPt(widthMm - inner - outer);
 
     // 縦中横の宣言群。認識する構文がリーダーごとに違うため、EPUB では標準・WebKit(新)・
-    // EPUB3・レガシー(旧 WebKit) の全構文を併記して広く網を張る。Kindle など旧エンジンは
-    // 標準の text-combine-upright を無視し、レガシーの -webkit-text-combine: horizontal
-    // だけを解釈することがあり、これが無いと ！？ が縦中横にならず倒れる。
+    // EPUB3・レガシー(旧 WebKit / EPUB3 プロファイル) の全構文を併記して広く網を張る。
+    // Kindle など旧エンジンは標準の text-combine-upright を無視し、レガシーの
+    // -webkit-text-combine: horizontal だけを解釈することがあり、これが無いと ！？ が
+    // 縦中横にならず倒れる。無接頭辞の text-combine はどのリーダーも実装していない
+    // 草案時代のプロパティなので出さない（EPUBCheck の CSS 警告になるだけ）。
     // PDF(Vivliostyle) は標準構文で足りるので併記しない。
     const tcyDecls = format === 'epub'
         ? [
@@ -138,7 +140,7 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
             '-webkit-text-combine-upright: all;',
             '-epub-text-combine-upright: all;',
             '-webkit-text-combine: horizontal;',
-            'text-combine: horizontal;',
+            '-epub-text-combine: horizontal;',
           ].join('\n  ')
         : [
             'text-combine-upright: all;',

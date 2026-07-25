@@ -318,6 +318,18 @@ describe('ページ設定 CSS', () => {
         expect(a6).toMatch(/\.atb-colophon\s*\{[^}]*white-space:\s*nowrap/);
     });
 
+    it('紙面固定の CSS（@page・ノンブル・コロフォン）は EPUB には出さない', () => {
+        // ページメディア専用の機構で、リフロー型リーダーは解釈しない。README の
+        // 「ノンブル・綴じ代・コロフォンは PDF 専用」どおり EPUB からは丸ごと外す。
+        const epub = render(parse('文'), vertical, 'epub');
+        expect(epub).not.toContain('@page');
+        expect(epub).not.toContain('atb-colophon');
+        expect(epub).not.toContain('counter(page)');
+        const pdf = render(parse('文'), vertical, 'pdf');
+        expect(pdf).toContain('@page');
+        expect(pdf).toContain('.atb-colophon');
+    });
+
     it('ノンブルは小口側の隅ボックス（本文の外）に置かれる', () => {
         // 縦書き(右綴じ): recto(:left) は小口=左 → @bottom-left-corner
         const v = html('文', vertical);
@@ -380,10 +392,13 @@ describe('EPUB の spine 分割（renderSections）', () => {
         expect(bodyOf(s[2]!)).toContain('後文');
     });
 
-    it('コロフォンは最後の spine 文書にだけ入る', () => {
+    it('コロフォンは EPUB には入れない（PDF 専用）', () => {
+        // リフロー型リーダーは position:running を解釈せず、コロフォンが本文末尾に
+        // 地の文として表示されてしまうため、EPUB の spine には入れない。
         const s = sections('前\n＠＠＠\n後');
-        expect(bodyOf(s[0]!)).not.toContain('atb-colophon');
-        expect(bodyOf(s[s.length - 1]!)).toContain('atb-colophon');
+        for (const doc of s) {
+            expect(bodyOf(doc)).not.toContain('atb-colophon');
+        }
     });
 
     it('各 spine に連番のファイル名が付く', () => {

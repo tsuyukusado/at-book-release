@@ -166,8 +166,11 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
 `;
     const bodyFontFamily = format === 'epub' ? 'serif' : '"Shippori Mincho", serif';
 
-    return `
-@page {
+    // 紙面固定（ページメディア）の CSS 一式。@page・ノンブル・コロフォンはページメディア
+    // 専用の機構で、リフロー型 EPUB リーダーは解釈しない。特にコロフォンは
+    // position:running が無視されて本文末尾に地の文として出てしまうため、
+    // README の「PDF 専用」どおり EPUB にはこの一式を出さない。
+    const pageCss = format === 'epub' ? '' : `@page {
   size: ${widthMm}mm ${heightMm}mm;
   margin-top: 10mm;
   margin-bottom: 10mm;
@@ -188,7 +191,20 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
   ${nombreBox(verso.nombre)}
 }
 
-${fontFaceCss}
+/* コロフォン: 流れからは外し、最終ページのフッター中央にのみ出す。
+   縦書きでも横組みで出すため writing-mode を明示する（element() で引くと元の縦組みを保持するため）。
+   font-size は版面幅に収める縮小値をここ（実行要素側）に指定する（@bottom-center 側は効かない）。
+   white-space:nowrap で 1 行に保ち、版面幅に収まる font-size なので左右が切れない。 */
+.atb-colophon {
+  position: running(atb-colophon);
+  writing-mode: horizontal-tb;
+  white-space: nowrap;
+  font-size: ${colophonFontPt}pt;
+}
+`;
+
+    return `
+${pageCss}${fontFaceCss}
 html {
   font-family: ${bodyFontFamily};
   font-size: 9pt;
@@ -308,17 +324,6 @@ ruby.atb-kenten > rt > span {
    これが無い／標準構文しか無いと、Kindle 等では ！？ が縦中横にならず倒れてしまう。 */
 .atb-tcy {
   ${tcyDecls}
-}
-
-/* コロフォン: 流れからは外し、最終ページのフッター中央にのみ出す。
-   縦書きでも横組みで出すため writing-mode を明示する（element() で引くと元の縦組みを保持するため）。
-   font-size は版面幅に収める縮小値をここ（実行要素側）に指定する（@bottom-center 側は効かない）。
-   white-space:nowrap で 1 行に保ち、版面幅に収まる font-size なので左右が切れない。 */
-.atb-colophon {
-  position: running(atb-colophon);
-  writing-mode: horizontal-tb;
-  white-space: nowrap;
-  font-size: ${colophonFontPt}pt;
 }
 `.trim();
 }
@@ -535,7 +540,8 @@ export function render(nodes: ParsedNode[], config: PaperConfig, format: 'pdf' |
 
     const body = blocks.map(b => b.html);
     // コロフォンは流れの最後に置く（最終ページのフッターに実行組版される）。
-    body.push(COLOPHON_HTML);
+    // ページメディア専用の機構なので PDF のときだけ入れる。
+    if (format !== 'epub') body.push(COLOPHON_HTML);
 
     return wrapDocument(body.join('\n'), buildCss(config, format));
 }
@@ -588,9 +594,10 @@ export function renderSections(nodes: ParsedNode[], config: PaperConfig): EpubSe
     }
     flush();
 
-    // コロフォンは最後の spine 文書の流れの末尾へ。1 文書も無ければ 1 つ作る。
+    // コロフォンは入れない（PDF 専用）。リフロー型リーダーは position:running を解釈せず、
+    // 本文末尾に地の文として表示してしまうため。spine 0 件は EPUB として不正なので、
+    // 原稿が空でも文書を 1 つは作る。
     if (sections.length === 0) sections.push([]);
-    sections[sections.length - 1]!.push({ html: COLOPHON_HTML });
 
     // 目次の #id を、その見出しが入った spine ファイルへのクロスファイル参照に置き換える。
     const rewriteTocLinks = (html: string): string =>

@@ -7,7 +7,9 @@ const ANY_MARKER     = "# [at-book] auto-generated hook";
 
 const HOOK_CONTENT = `#!/bin/sh
 ${CURRENT_MARKER}
-changed=$(git diff-tree --no-commit-id -r --name-only HEAD | grep '\\.atb$')
+# --root を付けないと、親を持たない最初のコミットで diff-tree が何も出力せず、
+# 新規リポジトリの1回目のコミットだけ生成が走らない（新規利用者が最初に踏む）。
+changed=$(git diff-tree --no-commit-id -r --name-only --root HEAD | grep '\\.atb$')
 if [ -z "$changed" ]; then
     exit 0
 fi

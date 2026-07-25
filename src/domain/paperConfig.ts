@@ -15,7 +15,9 @@ export interface PaperConfig {
     formats?:               OutputFormat[];
 }
 
+// 日本語の小説を組むツールなので、既定は縦書き。README の設定表も vertical を
+// 既定として案内している。
 export const defaultPaperConfig: PaperConfig = {
     paperSize:   'a6',
-    writingMode: 'horizontal',
+    writingMode: 'vertical',
 };

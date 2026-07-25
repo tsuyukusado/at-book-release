@@ -5,7 +5,7 @@ export type { dash } from "./dash";
 export type { ellipsis } from "./ellipsis";
 export type { paragraph } from "./paragraph";
 export type { PaperSize, WritingMode, OutputFormat, PaperConfig } from "./paperConfig";
-export { defaultPaperConfig } from "./paperConfig";
+export { defaultPaperConfig, DEFAULT_OUT_DIR_NAME } from "./paperConfig";
 export type { CoverSpec } from "./coverSpec";
 export { calcSpineWidthMm, PAPER_DIMENSIONS_MM } from "./coverSpec";
 export type { WebFile, WebExport } from "./webExport";

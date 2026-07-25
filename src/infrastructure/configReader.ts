@@ -39,7 +39,12 @@ export const nodeConfigReader: ConfigReader = {
                 ? [...new Set(rawFormats.filter((v): v is OutputFormat => VALID_FORMATS.includes(v as OutputFormat)))]
                 : undefined;
 
-            return { paperSize, writingMode, bodyPaperThicknessMm, coverPaperThicknessMm, autoGenerate, formats: formats && formats.length > 0 ? formats : undefined };
+            // 出力先。空文字・空白だけの指定は「未指定」と同じ扱いにする
+            // （そのまま使うと原稿と同じフォルダに成果物を撒いてしまうため）。
+            const rawOutDir = parsed.outDir;
+            const outDir = typeof rawOutDir === 'string' && rawOutDir.trim() !== '' ? rawOutDir.trim() : undefined;
+
+            return { paperSize, writingMode, bodyPaperThicknessMm, coverPaperThicknessMm, autoGenerate, formats: formats && formats.length > 0 ? formats : undefined, outDir };
         } catch {
             return defaultPaperConfig;
         }

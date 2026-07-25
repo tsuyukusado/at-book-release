@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import * as path from "path";
 import { readFileSync, readdirSync, statSync } from "fs";
-import { convertAtb, convertAtbToWeb, buildDefaultConfigContent } from "../usecase";
+import { convertAtb, convertAtbToWeb, buildDefaultConfigContent, resolveOutDir } from "../usecase";
+import { DEFAULT_OUT_DIR_NAME } from "../domain";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
 import { nodeFileReader, vivliostyleRunner, nodeConfigReader, nodeFileWriter, findConfigDirs } from "../infrastructure";
@@ -40,7 +41,7 @@ async function runCover(args: string[]): Promise<void> {
 
     // 原稿を伴わない単体実行なので、作品ディレクトリが定まらない。
     // 出力先はカレントディレクトリ基準（または引数で明示）とする。
-    const outputPath = outputArg ?? path.join('dist', 'cover-template.svg');
+    const outputPath = outputArg ?? path.join(config.outDir ?? DEFAULT_OUT_DIR_NAME, 'cover-template.svg');
 
     const { svgPath } = await generateCoverTemplate(
         { fileWriter: nodeFileWriter },
@@ -72,20 +73,18 @@ async function runCover(args: string[]): Promise<void> {
 interface Work {
     // 原稿の実ファイルパス（絶対）。読み込みと出力ファイル名の元になる。
     atbPath:  string;
-    // 成果物の出力先（絶対）。<原稿のあるディレクトリ>/dist。
+    // 成果物の出力先（絶対）。既定は <原稿のあるディレクトリ>/at-book-out。
     outDir:   string;
 }
 
-function resolveWork(atbPathArg: string): Work {
+async function resolveWork(atbPathArg: string): Promise<Work> {
     const atbPath = path.resolve(atbPathArg);
-    return {
-        atbPath,
-        outDir:   path.join(path.dirname(atbPath), 'dist'),
-    };
+    const config  = await nodeConfigReader.read(atbPath);
+    return { atbPath, outDir: resolveOutDir(atbPath, config) };
 }
 
 async function runConvert(atbPathArg: string): Promise<void> {
-    const work = resolveWork(atbPathArg);
+    const work = await resolveWork(atbPathArg);
     const { pdfPath, epubPath, pageCount, charCount, formats, config } = await convertAtb(
         {
             converter:    atbConverter,
@@ -127,7 +126,7 @@ async function runConvert(atbPathArg: string): Promise<void> {
 // atb をウェブ投稿用テキストへ変換する。
 // 見出しで「作品フォルダ / 章フォルダ / 話ファイル(.txt)」に分割して出力する。
 async function runWeb(atbPathArg: string): Promise<void> {
-    const work = resolveWork(atbPathArg);
+    const work = await resolveWork(atbPathArg);
     const outDir = path.join(work.outDir, 'web');
     const { bookDir, export: result, writtenPaths } = await convertAtbToWeb(
         { fileReader: nodeFileReader, fileWriter: nodeFileWriter },

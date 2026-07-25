@@ -33,10 +33,11 @@ describe('findConfigDirs', () => {
         expect(found.sort()).toEqual([a, b].sort());
     });
 
-    it('node_modules / .git / dist の下は探さない', async () => {
+    it('node_modules / .git / dist / at-book-out の下は探さない', async () => {
         await putConfig('node_modules', 'pkg');
         await putConfig('.git', 'info');
         await putConfig('dist');
+        await putConfig('at-book-out');
         const real = await putConfig('doc');
         expect(await findConfigDirs(dir)).toEqual([real]);
     });

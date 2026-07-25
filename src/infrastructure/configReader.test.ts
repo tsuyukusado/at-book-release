@@ -78,6 +78,17 @@ describe('configReader の用紙・組み方向・紙厚・autoGenerate', () => 
         expect((await readConfig({ autoGenerate: 'a.atb' })).autoGenerate).toBeUndefined();
     });
 
+    it('outDir は文字列ならそのまま読み取る（前後の空白は落とす）', async () => {
+        expect((await readConfig({ outDir: 'out' })).outDir).toBe('out');
+        expect((await readConfig({ outDir: '  build/本  ' })).outDir).toBe('build/本');
+    });
+
+    it('outDir が空文字・空白のみ・文字列でなければ undefined', async () => {
+        expect((await readConfig({ outDir: '' })).outDir).toBeUndefined();
+        expect((await readConfig({ outDir: '   ' })).outDir).toBeUndefined();
+        expect((await readConfig({ outDir: 123 })).outDir).toBeUndefined();
+    });
+
     it('設定ファイルが無ければデフォルト設定を返す', async () => {
         const noConfigDir = path.join(dir, 'no-config');
         await mkdir(noConfigDir, { recursive: true });

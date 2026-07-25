@@ -212,18 +212,18 @@ function helpText(): string {
     return [
         '使い方: at-book [対象|コマンド]',
         '',
-        '  at-book                      カレントディレクトリ配下の autoGenerate をビルド',
-        '  at-book <フォルダ>           配下の at-book.config.json を全て探してビルド',
-        '  at-book <at-book.config.json> その設定ファイルの autoGenerate だけをビルド',
-        '  at-book <原稿.atb>           その原稿だけをビルド（隣の設定ファイルを使う）',
+        '  at-book                        カレントディレクトリ配下の autoGenerate をビルド',
+        '  at-book <フォルダ>             配下の at-book.config.json を全て探してビルド',
+        '  at-book <at-book.config.json>  その設定ファイルの autoGenerate だけをビルド',
+        '  at-book <原稿.atb>             その原稿だけをビルド（隣の設定ファイルを使う）',
         '',
-        '  at-book init                 カレントディレクトリに初期設定ファイルを生成',
-        '  at-book web <原稿.atb>       ウェブ投稿用テキストに変換',
+        '  at-book init                   カレントディレクトリに初期設定ファイルを生成',
+        '  at-book web <原稿.atb>         ウェブ投稿用テキストに変換',
         '  at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]',
-        '                               表紙テンプレート（SVG）を生成',
+        '                                 表紙テンプレート（SVG）を生成',
         '',
-        '  --version, -v                バージョンを表示',
-        '  --help, -h                   この使い方を表示',
+        '  --version, -v                  バージョンを表示',
+        '  --help, -h                     この使い方を表示',
     ].join('\n');
 }
 

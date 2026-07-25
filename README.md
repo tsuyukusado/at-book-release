@@ -19,13 +19,8 @@ npm init -y
 **2. ＠本をインストールする**
 
 ```sh
-npm install --save-dev at-book
+npm install --save-dev github:tsuyukusado/at-book-release
 ```
-
-> **npm 公開までの暫定手順**
-> まだ npm に公開されていないため、当面は GitHub から直接インストールしてください。
-> `npm install --save-dev github:tsuyukusado/at-book-release`
-> 公開後は上の `npm install --save-dev at-book` に切り替わります。
 
 **3. 原稿と設定ファイルを置く**
 
@@ -238,7 +233,13 @@ node -v
 ＠本は**作品リポジトリごとに**インストールします。ツールのリポジトリをクローンして、その中に原稿を書く必要はありません。
 
 ```sh
-npm install --save-dev at-book
+npm install --save-dev github:tsuyukusado/at-book-release
+```
+
+バージョンを固定したい場合は、タグやコミットを `#` の後ろに指定できます。
+
+```sh
+npm install --save-dev github:tsuyukusado/at-book-release#v1.0.0
 ```
 
 作品ごとに入れる形にしているのには理由があります。

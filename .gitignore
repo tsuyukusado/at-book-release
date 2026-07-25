@@ -1,6 +1,8 @@
 node_modules/
 dist/
 out/
+# npm pack の生成物（配布用 tarball）
+*.tgz
 *.ltjruby
 *.log
 .at-book-count.state

@@ -53,15 +53,27 @@ dist/
 node_modules/
 ```
 
-**5. 一度だけ手動で実行する**
+**5. 組版してみる**
 
 ```sh
-npx at-book doc/your-novel.atb
+npx at-book
 ```
 
-これで PDF が生成され、同時に**コミット時の自動生成フックが導入されます**。
+`doc/dist/` に PDF ができていれば成功です。
 
-**6. あとはコミットするだけ**
+**6. コミット時に自動生成させる（任意）**
+
+コミットするたび自動で組みたい場合は、git のフックに 1 行足します。＠本がこれを勝手に書き込むことはありません。あなたのリポジトリの設定なので、あなたが置きます。
+
+```sh
+cat > .git/hooks/post-commit <<'EOF'
+#!/bin/sh
+git diff-tree --no-commit-id -r --name-only --root HEAD | grep -q '\.atb$' && npx at-book
+EOF
+chmod +x .git/hooks/post-commit
+```
+
+**7. あとはコミットするだけ**
 
 ```sh
 git add .
@@ -254,17 +266,59 @@ npm install --save-dev github:tsuyukusado/at-book-release#v1.0.0
 npx at-book --version
 ```
 
-## git フックの導入
+## コミット時に自動生成する（任意）
 
-コミット時の自動生成は git フック（`post-commit`）で動きます。フックは、そのリポジトリで＠本を**一度でも実行すれば自動的に導入されます**。
+「コミットしたらコマンドを実行する」のは git が元から持っている機能（フック）です。＠本はこれを肩代わりしません。組版ツールとして独立させ、いつ動かすかはあなたが決められるようにしています。
+
+`.git/hooks/post-commit` に次の内容を置き、実行権限を付けてください。
 
 ```sh
-npx at-book doc/your-novel.atb
+#!/bin/sh
+git diff-tree --no-commit-id -r --name-only --root HEAD | grep -q '\.atb$' && npx at-book
 ```
 
-手で `.git/hooks` を編集する必要はありません。＠本を新しいバージョンに上げたときも、次に実行したタイミングでフックが自動更新されます。
+```sh
+chmod +x .git/hooks/post-commit
+```
 
-> `npx at-book --version` だけではフックは導入されません（バージョン確認に副作用を持たせないためです）。原稿を指定して一度実行してください。
+`--root` は必要です。これが無いと、親を持たない**最初のコミットだけ**何も起きません。
+
+グローバル導入（`npm i -g`）で使っている場合は `npx at-book` を `at-book` に置き換えてください。
+
+### 好きなように変えられます
+
+自分のファイルなので、用途に合わせて書き換えられます。
+
+```sh
+# 特定の作品だけ組む
+... && npx at-book novel/001
+
+# 組版が重いのでバックグラウンドに回す（コミットが待たされない）
+... && (npx at-book > dist/at-book.log 2>&1 &)
+
+# 文字数の記録も残す
+... && npx at-book count --committed doc/your-novel.atb
+```
+
+### フック管理ツールを使う場合
+
+`husky` や `lefthook`、`simple-git-hooks` を既に使っているなら、そちらの設定に `npx at-book` を書くだけです。チームで共有したい場合や、フックをバージョン管理に載せたい場合はこちらが向いています。
+
+```json
+{
+  "simple-git-hooks": {
+    "post-commit": "npx at-book"
+  }
+}
+```
+
+### リポジトリで共有する場合
+
+`.git/hooks/` は git の管理外なので、クローンしても引き継がれません。共有したいときは `.githooks/` などに置いて、パスを切り替えてください。
+
+```sh
+git config core.hooksPath .githooks
+```
 
 ## VS Code 拡張のインストール（任意）
 
@@ -285,9 +339,11 @@ npx at-book doc/your-novel.atb
 - 原稿用のフォルダに、拡張子を`.atb`にしたファイルをつくります。
 - **同じフォルダ**に `at-book.config.json` を置き、`autoGenerate` にそのファイル名を書きます。
 - 自由に小説を書きます。
-- gitにコミットします。
+- `npx at-book` を実行します。
 
 基本の使い方はこれだけです。
+
+[コミット時に自動生成する](#コミット時に自動生成する任意) を設定しておけば、この最後の 1 行も要らなくなり、コミットするだけで本ができます。
 
 ## 設定ファイル
 
@@ -490,7 +546,10 @@ npx at-book web doc/sample.atb
 
 - `at-book.config.json` に `autoGenerate` を書いているか確認してください。ここに書かれた原稿だけが自動生成の対象です。
 - 設定ファイルが `.atb` と**同じフォルダ**にあるか確認してください。
-- そのリポジトリで一度でも `npx at-book <file.atb>` を実行しましたか。フックはこのタイミングで導入されます。
+- `.git/hooks/post-commit` を置きましたか。＠本はフックを自動では導入しません（[コミット時に自動生成する](#コミット時に自動生成する任意) を参照）。
+- そのフックに実行権限（`chmod +x`）は付いていますか。
+- `--root` を付けていますか。無いと最初のコミットだけ反応しません。
+- まず `npx at-book` を手で実行して、組版自体が通るか切り分けてください。
 
 ## 用紙サイズや縦書きの設定が効かない
 
@@ -511,7 +570,7 @@ npm install
 npm run setup
 ```
 
-`npm install` はビルドまでしか行いません。`npm run setup` がグローバルリンクとフック設定（`core.hooksPath`）を行います。
+`npm install` はビルドまでしか行いません。`npm run setup` がグローバルリンクと、このリポジトリ自身のフック設定（`core.hooksPath` を `.githooks` に向ける）を行います。`.githooks/post-commit` は自動生成物ではなく、リポジトリが自分で置いている普通のシェルスクリプトです。
 
 ```sh
 npm test          # テストを実行

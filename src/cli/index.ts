@@ -5,7 +5,7 @@ import { execSync } from "child_process";
 import { convertAtb, convertAtbToWeb } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
-import { nodeFileReader, vivliostyleRunner, readPdfPageCount, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs, appendCharCount, readCountState, writeCountState } from "../infrastructure";
+import { nodeFileReader, vivliostyleRunner, readPdfPageCount, nodeConfigReader, nodeFileWriter, findConfigDirs, appendCharCount, readCountState, writeCountState } from "../infrastructure";
 import type { CountState } from "../infrastructure";
 import { countChars } from "../usecase/countChars";
 
@@ -429,14 +429,10 @@ function readVersion(): string {
 async function main(): Promise<void> {
     const [subcommand, ...rest] = process.argv.slice(2);
 
-    // --version は post-commit フックの「at-book が入っているか」判定にも使われる。
-    // 副作用なく即座に応答する必要があるため、ensureHookInstalled() より前に処理する。
     if (subcommand === "--version" || subcommand === "-v") {
         console.log(readVersion());
         return;
     }
-
-    ensureHookInstalled();
 
     if (subcommand === "cover") {
         await runCover(rest);

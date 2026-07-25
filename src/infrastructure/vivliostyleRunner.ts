@@ -121,7 +121,8 @@ async function runVivliostyle(
             lines.push('  環境変数 AT_BOOK_CHROME に指定して再実行してください。');
             lines.push('  例: AT_BOOK_CHROME=/usr/bin/google-chrome npx at-book');
         }
-        throw new Error(lines.join('\n'));
+        // 案内を足して投げ直すが、元の例外は cause に残す（スタックが消えると調査できない）。
+        throw new Error(lines.join('\n'), { cause: err });
     }
 }
 
@@ -146,7 +147,7 @@ async function runPdfBuild(htmlContent: string, outputPath: string): Promise<voi
     } catch (err) {
         // 失敗時だけは隔離ディレクトリを残す。中間 HTML が原因調査の手掛かりになる。
         const reason = err instanceof Error ? err.message : String(err);
-        throw new Error(`${reason}\n  組版に使った中間ファイルを残しました: ${buildDir}`);
+        throw new Error(`${reason}\n  組版に使った中間ファイルを残しました: ${buildDir}`, { cause: err });
     }
     // 成功したら片付ける。PDF にはフォントのサブセットが埋め込まれ済みで、
     // TTF 実体（17MB）も中間 HTML も以降は不要。

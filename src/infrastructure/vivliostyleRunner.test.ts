@@ -141,6 +141,19 @@ describe('compile（PDF 組版）', () => {
             .rejects.toThrow('vivliostyle exited with code 1');
     });
 
+    it('案内を足して投げ直しても、元の例外を cause に残す', async () => {
+        spawnMock.mockImplementation(() => fakeChild(1));
+        const outPdf = path.join(dir, 'book-honbun.pdf');
+        const err = await vivliostyleRunner.compile('<html></html>', outPdf).then(
+            () => undefined,
+            (e: unknown) => e as Error,
+        );
+        // 中間ファイルの案内 → 組版失敗の案内 → 素の spawn 失敗、と原因をたどれる。
+        const root = (err!.cause as Error).cause;
+        expect(root).toBeInstanceOf(Error);
+        expect((root as Error).message).toBe('vivliostyle exited with code 1');
+    });
+
     it('AT_BOOK_CHROME 未指定の失敗では AT_BOOK_CHROME の指定を案内する', async () => {
         // 同梱 Chromium のダウンロードに失敗する環境（Playwright 非対応 OS 等）でも、
         // 手元のブラウザを指せば組める。その道筋をエラーに含める。

@@ -258,7 +258,13 @@ async function main(): Promise<void> {
 main().catch((err: unknown) => {
     // 利用者向け CLI なので、想定内の失敗はスタックトレースではなくメッセージだけを出す。
     // Error 以外（想定外の投げ方）はそのまま出して手掛かりを残す。
-    if (err instanceof Error) console.error(`エラー: ${err.message}`);
-    else console.error(err);
+    if (err instanceof Error) {
+        console.error(`エラー: ${err.message}`);
+        // 原因の連鎖とスタックは既定では伏せる（利用者には読む負担でしかない）。
+        // 不具合を報告するときなど、詳細が要る場合だけ AT_BOOK_DEBUG=1 を付ける。
+        if (process.env.AT_BOOK_DEBUG) console.error(err);
+    } else {
+        console.error(err);
+    }
     process.exit(1);
 });

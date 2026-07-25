@@ -5,28 +5,75 @@
 
 前提として **Node.js v18 以上** が必要です（入っていなければ [Node.js 公式サイト](https://nodejs.org/ja) から LTS 版をインストールしてください）。
 
-**1. クローンしてインストール**
+**1. 作品用のフォルダを用意する**
+
+＠本は、あなたの作品リポジトリに**道具として入れて**使います。作品ごとにフォルダを作ってください。
 
 ```sh
-git clone https://github.com/tsuyukusado/at-book-release.git
-cd at-book-release
-npm install
+mkdir my-novel
+cd my-novel
+git init
+npm init -y
 ```
 
-`npm install` だけで、ビルド・git フック・組版エンジン（Vivliostyle）の準備まで自動で完了します。
-
-**2. 原稿を書く**
-
-`doc` フォルダに拡張子 `.atb` のファイルをつくり、小説を書きます。使う記法は「＠マーク」だけ（詳しくは後述）。
-
-**3. コミットする**
+**2. ＠本をインストールする**
 
 ```sh
-git add doc/your-novel.atb
+npm install --save-dev at-book
+```
+
+> **npm 公開までの暫定手順**
+> まだ npm に公開されていないため、当面は GitHub から直接インストールしてください。
+> `npm install --save-dev github:tsuyukusado/at-book-release`
+> 公開後は上の `npm install --save-dev at-book` に切り替わります。
+
+**3. 原稿と設定ファイルを置く**
+
+原稿を入れるフォルダ（ここでは `doc`）を作り、**同じフォルダに** `at-book.config.json` を置きます。
+
+```sh
+mkdir doc
+```
+
+`doc/at-book.config.json`
+
+```json
+{
+  "paperSize": "a6",
+  "writingMode": "vertical",
+  "autoGenerate": ["your-novel.atb"]
+}
+```
+
+`doc/your-novel.atb` に小説を書きます。使う記法は「＠マーク」だけ（詳しくは後述）。
+
+> `autoGenerate` は**自動生成の対象を指定する必須の項目**です。ここに書かないと、コミットしても何も生成されません。
+
+**4. 生成物を git の管理から外す**
+
+`.gitignore` に次の 2 行を加えてください。
+
+```
+dist/
+node_modules/
+```
+
+**5. 一度だけ手動で実行する**
+
+```sh
+npx at-book doc/your-novel.atb
+```
+
+これで PDF が生成され、同時に**コミット時の自動生成フックが導入されます**。
+
+**6. あとはコミットするだけ**
+
+```sh
+git add .
 git commit -m "執筆開始"
 ```
 
-コミットした瞬間、`dist` フォルダに**印刷用 PDF が自動生成**されます。あなたがすることは、もう書くことだけです。
+コミットした瞬間、`dist/at-book` フォルダに**印刷用 PDF が自動生成**されます。あなたがすることは、もう書くことだけです。
 
 > 初回の PDF 生成時のみ、組版用のヘッドレスブラウザ（数百 MB）が自動ダウンロードされます。ネットワークに接続した状態で最初の生成を行ってください。
 
@@ -152,7 +199,7 @@ VSCodeで書く → gitでコミットする → そのまま出版・投稿で�
 
 # インストールの詳細
 
-「まずは簡潔に」で走らせた導入を、OS ごとにもう少し丁寧に説明します。
+「まずは簡潔に」で走らせた導入を、もう少し丁寧に説明します。
 
 ## Node.js のインストール
 
@@ -184,50 +231,129 @@ sudo apt install nodejs npm
 node -v
 ```
 
-> **TeX Live は不要になりました。** ＠本の組版エンジンは HTML/CSS ベースに刷新され、PDF 生成には [Vivliostyle](https://vivliostyle.org/) を利用します。LaTeX（LuaLaTeX / TeX Live）のインストールは必要ありません。
+> **TeX Live は不要です。** ＠本の組版エンジンは HTML/CSS ベースで、PDF 生成には [Vivliostyle](https://vivliostyle.org/) を利用します。LaTeX（LuaLaTeX / TeX Live）のインストールは必要ありません。
+
+## ＠本のインストール
+
+＠本は**作品リポジトリごとに**インストールします。ツールのリポジトリをクローンして、その中に原稿を書く必要はありません。
+
+```sh
+npm install --save-dev at-book
+```
+
+作品ごとに入れる形にしているのには理由があります。
+
+- 作品の履歴とツールの履歴が混ざらない
+- 作品ごとに＠本のバージョンが固定されるので、**去年書いた本を組み直しても組版結果が変わらない**
+- グローバルインストール（`npm link` など）が要らないので、Node のバージョンを切り替えても壊れない
+
+インストールできたか確認するには、次のコマンドを実行します。
+
+```sh
+npx at-book --version
+```
+
+## git フックの導入
+
+コミット時の自動生成は git フック（`post-commit`）で動きます。フックは、そのリポジトリで＠本を**一度でも実行すれば自動的に導入されます**。
+
+```sh
+npx at-book doc/your-novel.atb
+```
+
+手で `.git/hooks` を編集する必要はありません。＠本を新しいバージョンに上げたときも、次に実行したタイミングでフックが自動更新されます。
+
+> `npx at-book --version` だけではフックは導入されません（バージョン確認に副作用を持たせないためです）。原稿を指定して一度実行してください。
 
 ## VS Code 拡張のインストール（任意）
 
 `.atb` ファイルの構文強調表示を有効にします。VSCodeで執筆する場合はぜひ入れておいてください。
 
-1. VS Code の左サイドバーで拡張機能アイコンをクリック（または `Ctrl+Shift+X` / `Cmd+Shift+X`）
-2. 右上の `…` メニューから「VSIX からインストール...」を選択
-3. `vscode-atb/vscode-atb-0.1.4.vsix` を選択してインストール
-4. VS Code を再起動
+拡張は VS Code Marketplace には未公開のため、リポジトリから `.vsix` ファイルを入手します。
+
+1. [at-book-release リポジトリ](https://github.com/tsuyukusado/at-book-release) の `vscode-atb/vscode-atb-0.1.4.vsix` をダウンロード
+2. VS Code の左サイドバーで拡張機能アイコンをクリック（または `Ctrl+Shift+X` / `Cmd+Shift+X`）
+3. 右上の `…` メニューから「VSIX からインストール...」を選択
+4. ダウンロードした `vscode-atb-0.1.4.vsix` を選択してインストール
+5. VS Code を再起動
 
 # 使い方
 
 ## 基本
 
-- docというフォルダに、拡張子を`.atb`にしたファイルをつくります。
+- 原稿用のフォルダに、拡張子を`.atb`にしたファイルをつくります。
+- **同じフォルダ**に `at-book.config.json` を置き、`autoGenerate` にそのファイル名を書きます。
 - 自由に小説を書きます。
 - gitにコミットします。
 
 基本の使い方はこれだけです。
 
-## 生成されたPDFの場所
+## 設定ファイル
 
-自動で生成されるPDFは、distというディレクトリに保存されています。
+`at-book.config.json` は、**`.atb` ファイルと同じディレクトリに置いてください**。＠本は原稿と同じ場所にある設定ファイルを読みます。リポジトリのルートに置いても、用紙サイズなどの設定は反映されません。
+
+作品が複数あるなら、原稿フォルダごとに 1 つずつ置きます。
+
+```
+my-novel/
+├── doc/
+│   ├── at-book.config.json   ← ここ
+│   └── your-novel.atb
+└── dist/at-book/             ← 生成物はここに出る
+```
+
+指定できる項目は次のとおりです。
+
+| プロパティ | 値 | デフォルト |
+|---|---|---|
+| `autoGenerate` | 自動生成する `.atb` ファイル名の配列 | なし（**未指定だと何も生成されません**） |
+| `paperSize` | `a4` / `a5` / `a6` / `b5` | `a6` |
+| `writingMode` | `vertical`（縦書き）/ `horizontal`（横書き）| `vertical` |
+| `formats` | `pdf` / `epub` / `web` の配列 | `["pdf"]` |
+| `bodyPaperThicknessMm` | 本文用紙の厚さ（mm）例: `0.09` | なし |
+| `coverPaperThicknessMm` | 表紙用紙の厚さ（mm）例: `0.35` | なし |
+
+### autoGenerate
+
+コミット時に自動生成する原稿を指定します。**この項目が無いと、コミットしても何も生成されません。**
+
+```json
+{
+  "autoGenerate": ["your-novel.atb"]
+}
+```
+
+ファイル名は設定ファイルから見た相対パスです。プロットやメモを `.atb` で書いていても、ここに書かなければ組版されません。
+
+## 生成されたファイルの場所
+
+生成物はすべて `dist/at-book/` 以下に保存されます。ファイル名は原稿のファイル名から作られます（`your-novel.atb` なら `your-novel-honbun.pdf`）。
+
+| ファイル | 内容 |
+|---|---|
+| `dist/at-book/<名前>-honbun.pdf` | 本文PDF |
+| `dist/at-book/<名前>.epub` | EPUB |
+| `dist/at-book/<名前>-hyoshi.svg` | 表紙テンプレート |
+| `dist/at-book/web/<作品フォルダ>/` | ウェブ投稿用テキスト |
+| `dist/at-book/char-count.log` | 文字数・ページ数の記録 |
 
 生成結果が気になる時は、随時確認しましょう。
+
+> **`dist/` は `.gitignore` に入れてください。** 組版の途中でフォントの実体（17MB）が `dist/at-book/` にコピーされるため、そのままだとリポジトリが重くなります。
+
+> **原稿のファイル名は作品ごとに変えてください。** 出力名は原稿のファイル名から決まるため、別フォルダでも同じ `manuscript.atb` という名前だと、生成物が同じ `manuscript-honbun.pdf` になって上書きされてしまいます。
 
 ## PDF生成の設定を変更する
 
 PDF生成時の、紙の大きさと縦書きか横書きかは変更することができます。
 
-`at-book.config.json` を編集してください。
-
 ```json
 {
   "paperSize": "a6",
-  "writingMode": "vertical"
+  "writingMode": "vertical",
+  "autoGenerate": ["your-novel.atb"]
 }
 ```
-
-| プロパティ | 値 | デフォルト |
-|---|---|---|
-| `paperSize` | `a4` / `a5` / `a6` / `b5` | `a6` |
-| `writingMode` | `vertical`（縦書き）/ `horizontal`（横書き）| `vertical` |
 
 ## EPUB（電子書籍）を生成する
 
@@ -237,22 +363,19 @@ PDF生成時の、紙の大きさと縦書きか横書きかは変更するこ�
 {
   "paperSize": "a6",
   "writingMode": "vertical",
+  "autoGenerate": ["your-novel.atb"],
   "formats": ["pdf", "epub"]
 }
 ```
-
-| プロパティ | 値 | デフォルト |
-|---|---|---|
-| `formats` | `pdf` / `epub` / `web` の配列 | `["pdf"]`（未指定時） |
 
 - `["pdf", "epub"]` … PDFとEPUBの両方を生成します。
 - `["epub"]` … EPUBのみを生成します。
 - `["pdf", "web"]` … PDFに加えて、ウェブ投稿用テキストも生成します。
 - 未指定（項目なし）… 従来どおりPDFのみを生成します。
 
-`web` を含めると、後述の [ウェブ投稿用のテキストに変換する](#ウェブ投稿用のテキストに変換する) と同じ内容が `dist/at-book/web/` 以下に生成されます（`at-book web <file.atb>` を実行するのと同じ結果です）。
+`web` を含めると、後述の [ウェブ投稿用のテキストに変換する](#ウェブ投稿用のテキストに変換する) と同じ内容が `dist/at-book/web/` 以下に生成されます（`npx at-book web <file.atb>` を実行するのと同じ結果です）。
 
-生成されたEPUBは `dist/<ファイル名>.epub` に保存されます。ルビ・圏点・縦書きはそのまま引き継がれます。
+生成されたEPUBは `dist/at-book/<ファイル名>.epub` に保存されます。ルビ・圏点・縦書きはそのまま引き継がれます。
 
 改ページ（`＠＠＠`）・大見出し（`＠`）・目次（`＠目次`）の区切りでは、EPUB内部を独立したファイル（spine）に分割します。リフロー型EPUBはCSSの改ページ指定を無視するため、区切りごとにファイルを分けることで、どの電子書籍リーダーでも確実に改ページされます。
 
@@ -276,7 +399,7 @@ PDF生成時の、紙の大きさと縦書きか横書きかは変更するこ�
 | `bodyPaperThicknessMm` | 本文用紙の厚さ（mm）例: `0.09` |
 | `coverPaperThicknessMm` | 表紙用紙の厚さ（mm）例: `0.35` |
 
-両方設定した状態でコミットすると、本文PDFと同時に `dist/sample-hyoshi.svg`（背幅・塗り足しガイド入り）が自動生成されます。
+両方設定した状態でコミットすると、本文PDFと同時に `dist/at-book/<名前>-hyoshi.svg`（背幅・塗り足しガイド入り）が自動生成されます。
 
 ## 手動でPDF生成を実行する
 
@@ -285,25 +408,32 @@ PDF生成時の、紙の大きさと縦書きか横書きかは変更するこ�
 ### 本文PDFと表紙テンプレートをまとめて生成する場合
 
 ```sh
-at-book doc/sample.atb
-# → dist/sample-honbun.pdf が生成される
+npx at-book doc/sample.atb
+# → dist/at-book/sample-honbun.pdf が生成される
 ```
 
 ### 表紙テンプレートをページ数指定で単体生成する場合
 
 ```sh
-at-book cover 160 0.09 0.35
-# → dist/cover-template.svg が生成される
+npx at-book cover 160 0.09 0.35
+# → dist/at-book/cover-template.svg が生成される
 ```
 
 引数は順に「ページ数」「本文用紙の厚さ（mm）」「表紙用紙の厚さ（mm）」です。
+
+### 文字数を記録する
+
+```sh
+npx at-book count doc/sample.atb
+# → 文字数とページ数を表示し、dist/at-book/char-count.log に追記する
+```
 
 ## ウェブ投稿用のテキストに変換する
 
 ＠本の記法で書いた原稿を、小説投稿サイト向けのテキストに変換できます。
 
 ```sh
-at-book web doc/sample.atb
+npx at-book web doc/sample.atb
 # → dist/at-book/web/<作品フォルダ>/ 以下にテキストが生成される
 ```
 
@@ -328,6 +458,43 @@ at-book web doc/sample.atb
 - **地の文は行頭に全角スペースが1つ入り**、一字下げされます。開きカッコ（`「『（〈《【〔［｛` や半角 `( [ {`）で始まる行（会話文など）、箇条書き（`・`）、空行、すでに全角スペースで始まる行は下げません。
 - `＠目次` は削除、`＠＠＠`（改ページ）は改行、箇条書き（`・`）はそのままのテキストになります。
 - 縦中横（`！？` や半角数字）はウェブでは横書き前提のため、そのまま出力されます。
+
+# 困ったときは
+
+## コミットしても何も生成されない
+
+- `at-book.config.json` に `autoGenerate` を書いているか確認してください。ここに書かれた原稿だけが自動生成の対象です。
+- 設定ファイルが `.atb` と**同じフォルダ**にあるか確認してください。
+- そのリポジトリで一度でも `npx at-book <file.atb>` を実行しましたか。フックはこのタイミングで導入されます。
+
+## 用紙サイズや縦書きの設定が効かない
+
+設定ファイルの置き場所を確認してください。＠本は `.atb` と同じディレクトリの `at-book.config.json` だけを読みます。
+
+## 生成に失敗する
+
+VS Code などからコミットした場合、生成はバックグラウンドで動きます。結果は `dist/at-book/.at-book-generate.log` に記録されているので、そちらを確認してください。
+
+# ＠本自体を開発する方へ
+
+＠本そのものに手を入れる場合は、リポジトリをクローンして次を実行してください。
+
+```sh
+git clone https://github.com/tsuyukusado/at-book-release.git
+cd at-book-release
+npm install
+npm run setup
+```
+
+`npm install` はビルドまでしか行いません。`npm run setup` がグローバルリンクとフック設定（`core.hooksPath`）を行います。
+
+```sh
+npm test          # テストを実行
+npm run build     # TypeScript をビルド
+npm pack          # 配布用の tarball を作る
+```
+
+テスト項目の一覧は `doc/test-items.md` にあります。
 
 # 最後に
 

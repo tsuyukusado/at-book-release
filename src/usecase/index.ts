@@ -6,3 +6,4 @@ export type { ConvertAtbToWebPorts, ConvertAtbToWebInput, ConvertAtbToWebOutput 
 export { convertAtbToWeb } from "./convertAtbToWeb";
 export { buildDefaultConfigContent } from "./initConfig";
 export { resolveOutDir } from "./resolveOutDir";
+export type { ConfigLoad, ConfigLoader } from "./configLoad";

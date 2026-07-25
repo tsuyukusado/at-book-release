@@ -65,7 +65,9 @@ cd ..
 {
   "paperSize": "a6",
   "writingMode": "vertical",
-  "autoGenerate": ["your-novel.atb"]
+  "autoGenerate": [
+    "your-novel.atb"
+  ]
 }
 ```
 
@@ -107,9 +109,7 @@ Homebrew が入っていない場合は、[Node.js 公式サイト](https://node
 
 ### Linux (Ubuntu/Debian)
 
-```sh
-sudo apt install nodejs npm
-```
+ディストリビューションの標準パッケージ（`apt install nodejs`）は古いことが多く、必要なバージョンに届きません（例: Ubuntu 24.04 は v18）。[Node.js 公式サイトのダウンロードページ](https://nodejs.org/ja/download) に表示される手順（nvm を使う方法など）で LTS 版をインストールしてください。
 
 インストール後、以下のコマンドでバージョンを確認してください。`v22.12` 以上であれば問題ありません。
 

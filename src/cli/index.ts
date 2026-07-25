@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as path from "path";
-import { readFileSync } from "fs";
+import { readFileSync, statSync } from "fs";
 import { execSync } from "child_process";
 import { convertAtb, convertAtbToWeb } from "../usecase";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
@@ -355,6 +355,66 @@ async function runWeb(atbPathArg: string): Promise<void> {
     }
 }
 
+const CONFIG_FILE_NAME = 'at-book.config.json';
+
+// 設定ファイル1つ分（＝作品1つ分）をビルドする。
+// autoGenerate が無ければ何もせず false を返す。
+async function buildConfigDir(configDir: string): Promise<boolean> {
+    // configReader は「原稿のパス」を受け取り、その隣の設定ファイルを読む仕様なので、
+    // ディレクトリ配下の適当なファイル名を与えて設定を引く。
+    const config = await nodeConfigReader.read(path.join(configDir, '_'));
+    if (!config.autoGenerate || config.autoGenerate.length === 0) return false;
+    for (const relPath of config.autoGenerate) {
+        await runConvert(path.join(configDir, relPath));
+    }
+    return true;
+}
+
+// ビルド対象を決めて実行する。引数の種類で振り分ける。
+//   省略                 … カレントディレクトリを指定したものとして扱う
+//   ディレクトリ         … 配下の設定ファイルを全て探し、その autoGenerate をビルド
+//   at-book.config.json  … その設定ファイルの autoGenerate だけをビルド
+//   .atb                 … その原稿だけをビルド（隣の設定ファイルを使う）
+// いずれも「設定ファイルを起点に作品を特定する」同じ操作なので、サブコマンドを
+// 増やさず引数の種類で分岐させている。
+async function runBuild(target?: string): Promise<void> {
+    const abs = path.resolve(target ?? '.');
+
+    let isDir: boolean;
+    try {
+        isDir = statSync(abs).isDirectory();
+    } catch {
+        console.error(`エラー: 見つかりません: ${target ?? '.'}`);
+        process.exit(1);
+    }
+
+    if (isDir) {
+        const configDirs = await findConfigDirs(abs);
+        let built = false;
+        for (const configDir of configDirs) {
+            if (await buildConfigDir(configDir)) built = true;
+        }
+        if (!built) {
+            console.error(`エラー: ${abs} 配下に autoGenerate を持つ ${CONFIG_FILE_NAME} が見つかりませんでした。`);
+            console.error(`  原稿と同じフォルダに ${CONFIG_FILE_NAME} を置き、autoGenerate に原稿のファイル名を書いてください。`);
+            console.error('  例: { "autoGenerate": ["your-novel.atb"] }');
+            process.exit(1);
+        }
+        return;
+    }
+
+    if (path.basename(abs) === CONFIG_FILE_NAME) {
+        if (!await buildConfigDir(path.dirname(abs))) {
+            console.error(`エラー: ${abs} に autoGenerate がありません。`);
+            console.error('  例: { "autoGenerate": ["your-novel.atb"] }');
+            process.exit(1);
+        }
+        return;
+    }
+
+    await runConvert(abs);
+}
+
 // パッケージ自身のバージョンを読む。__dirname は dist/cli なので二つ上がパッケージルート。
 function readVersion(): string {
     try {
@@ -378,26 +438,6 @@ async function main(): Promise<void> {
 
     ensureHookInstalled();
 
-    if (!subcommand) {
-        const configDirs = await findConfigDirs('.');
-        let hasAnyAutoGenerate = false;
-        for (const configDir of configDirs) {
-            const config = await nodeConfigReader.read(path.join(configDir, '_'));
-            if (!config.autoGenerate || config.autoGenerate.length === 0) continue;
-            hasAnyAutoGenerate = true;
-            for (const relPath of config.autoGenerate) {
-                await runConvert(path.join(configDir, relPath));
-            }
-        }
-        if (!hasAnyAutoGenerate) {
-            console.error("使い方: at-book <file.atb>");
-            console.error("        at-book web <file.atb>");
-            console.error("        at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]");
-            process.exit(1);
-        }
-        return;
-    }
-
     if (subcommand === "cover") {
         await runCover(rest);
     } else if (subcommand === "web") {
@@ -420,7 +460,8 @@ async function main(): Promise<void> {
             await runCountHistory();
         }
     } else {
-        await runConvert(subcommand);
+        // 残りはすべてビルド対象の指定として扱う（未指定ならカレントディレクトリ）。
+        await runBuild(subcommand);
     }
 }
 

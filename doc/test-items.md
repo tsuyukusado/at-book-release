@@ -75,11 +75,28 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | REND-14 | 縦中横（縦書き） | `<span class="atb-tcy">`（`text-combine-upright`）、！→!・？→? 変換 | htmlRenderer.test.ts | ✅ |
 | REND-15 | 縦中横（横書き） | 変換せず素通し（span で包まない） | htmlRenderer.test.ts | ✅ |
 | REND-16 | HTML特殊文字 | `<` `>` `&` をエスケープ | htmlRenderer.test.ts | ✅ |
-| REND-17 | 最終ページのコロフォン | 末尾に `<div class="atb-colophon">`（`running()` で最終ページ脚注へ） | htmlRenderer.test.ts | ✅ |
+| REND-17 | 最終ページのコロフォン（PDF） | 末尾に `<div class="atb-colophon">`（`running()` で最終ページ脚注へ） | htmlRenderer.test.ts | ✅ |
+| REND-18 | 紙面固定 CSS（`@page`・ノンブル・`running()`） | EPUB には出さない | htmlRenderer.test.ts | ✅ |
 | FONT-01 | PDF の本文フォント | `@font-face` で同梱フォントを埋め込み、`font-family: "Shippori Mincho", serif` | htmlRenderer.test.ts | ✅ |
 | FONT-02 | EPUB の本文フォント | `@font-face` を出さず `font-family: serif`（読者の端末のフォントに委ねる） | htmlRenderer.test.ts | ✅ |
 
-## 4. 背幅計算 — `domain/coverSpec.ts` `calcSpineWidthMm`
+## 4. EPUB の spine 分割 — `adapter/renderer/htmlRenderer.ts` `renderSections`
+
+リフロー型リーダーは CSS の `break-before:page` を尊重しないため、改ページは spine（XHTML 文書）の分割で表現する。
+
+| ID | 条件 | 期待結果 | テスト | 状態 |
+|----|------|----------|--------|------|
+| SEC-01 | 改ページ無し | 本文は 1 つの spine 文書 | htmlRenderer.test.ts | ✅ |
+| SEC-02 | `＠＠＠` | spine が分割され、改ページ用 div は残らない | htmlRenderer.test.ts | ✅ |
+| SEC-03 | 大見出し（`＠`） | 新しい spine から始まる | htmlRenderer.test.ts | ✅ |
+| SEC-04 | `＠目次` | 前後で分割され、単独の spine になる | htmlRenderer.test.ts | ✅ |
+| SEC-05 | 各 spine | 完全な HTML 文書・連番のファイル名 | htmlRenderer.test.ts | ✅ |
+| SEC-06 | 目次リンク | 見出しが実在する spine へのクロスファイル参照 | htmlRenderer.test.ts | ✅ |
+| SEC-07 | クレジット | 最後の spine に単独で入る（奥付ページ） | htmlRenderer.test.ts | ✅ |
+| SEC-08 | 原稿が空 | spine は 0 件にならない（0 件は EPUB として不正） | htmlRenderer.test.ts | ✅ |
+| SEC-09 | 空行 div | 中身に `&#160;` を持ち、空ブロックで潰れない | htmlRenderer.test.ts | ✅ |
+
+## 5. 背幅計算 — `domain/coverSpec.ts` `calcSpineWidthMm`
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
@@ -88,7 +105,7 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | SPINE-03 | 表紙紙厚を変更 | 背幅が連動（0.40→8.0mm） | svgCoverRenderer.test.ts | ✅ |
 | SPINE-04 | 奇数ページ | `ceil(pageCount/2)` で計算 | coverSpec.test.ts | ✅ |
 
-## 5. 表紙 SVG — `adapter/cover/svgCoverRenderer.ts` `renderCoverSvg`
+## 6. 表紙 SVG — `adapter/cover/svgCoverRenderer.ts` `renderCoverSvg`
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
@@ -100,7 +117,7 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | COVER-06 | 背幅 < 5mm | 背ラベルを出力しない | svgCoverRenderer.test.ts | ✅ |
 | COVER-07 | viewBox / width / height | 塗り足し込みの入稿サイズで出力 | svgCoverRenderer.test.ts | ✅ |
 
-## 6. 設定読み込み — `infrastructure/configReader.ts` `nodeConfigReader`
+## 7. 設定読み込み — `infrastructure/configReader.ts` `nodeConfigReader`
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
@@ -110,17 +127,65 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | CONF-04 | 紙厚が 0 以下/数値でない | `undefined` | configReader.test.ts | ✅ |
 | CONF-05 | autoGenerate が配列 | 文字列要素のみ抽出 | configReader.test.ts | ✅ |
 | CONF-06 | autoGenerate が非配列 | `undefined` | configReader.test.ts | ✅ |
-| CONF-07 | ファイル無し / 壊れた JSON | `defaultPaperConfig` を返す | configReader.test.ts | ✅ |
+| CONF-07 | ファイル無し / 壊れた JSON | `read` は `defaultPaperConfig` を返す | configReader.test.ts | ✅ |
+| CONF-08 | formats | 既知の値のみ採用し重複を除く | configReader.test.ts | ✅ |
+| CONF-09 | outDir が文字列 | 前後の空白を落として採用 | configReader.test.ts | ✅ |
+| CONF-10 | outDir が空文字・空白のみ・非文字列 | `undefined` | configReader.test.ts | ✅ |
+| CONF-11 | `load`: 正常 / ファイル無し / 壊れた JSON | `ok` / `missing` / `invalid`（理由付き）を区別 | configReader.test.ts | ✅ |
 
-## 7. 設定探索 — `infrastructure/configFinder.ts` `findConfigDirs`
+## 8. 設定探索 — `infrastructure/configFinder.ts` `findConfigDirs`
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
 | FIND-01 | config.json があるディレクトリ | そのディレクトリを返す | configFinder.test.ts | ✅ |
 | FIND-02 | 入れ子ディレクトリ | 再帰的に全て検出 | configFinder.test.ts | ✅ |
-| FIND-03 | node_modules / .git / dist | スキップする | configFinder.test.ts | ✅ |
+| FIND-03 | node_modules / .git / dist / at-book-out | スキップする | configFinder.test.ts | ✅ |
 
-## 8. ユースケース結線（fake ポートで検証）
+## 9. 文字数カウント — `usecase/countChars.ts` `countChars`
+
+| ID | 条件 | 期待結果 | テスト | 状態 |
+|----|------|----------|--------|------|
+| COUNT-01 | 通常段落 | 文字数を正しく数える | countChars.test.ts | ✅ |
+| COUNT-02 | ルビ `＠語（読み）` | 本文+読みの両方を数える（語+読み） | countChars.test.ts | ✅ |
+| COUNT-03 | 見出し・リスト行 | カウント対象に含む | countChars.test.ts | ✅ |
+| COUNT-04 | 空行・目次・改ページ | カウント対象外（0） | countChars.test.ts | ✅ |
+
+## 10. 出力先の解決 — `usecase/resolveOutDir.ts` `resolveOutDir`
+
+| ID | 条件 | 期待結果 | テスト | 状態 |
+|----|------|----------|--------|------|
+| OUT-01 | outDir 未指定 | `<原稿のフォルダ>/at-book-out` | resolveOutDir.test.ts | ✅ |
+| OUT-02 | outDir が相対パス | 原稿のフォルダを基準に解決 | resolveOutDir.test.ts | ✅ |
+| OUT-03 | outDir が絶対パス | そのまま使う | resolveOutDir.test.ts | ✅ |
+| OUT-04 | 相対パスの原稿 | カレントディレクトリに依存しない | resolveOutDir.test.ts | ✅ |
+
+## 11. ビルド対象の解決 — `usecase/resolveBuildTargets.ts` `resolveBuildTargets`
+
+引数の種類（フォルダ / 設定ファイル / 原稿）で対象を決める。失敗は種類で返し、文言は CLI が持つ。
+
+| ID | 条件 | 期待結果 | テスト | 状態 |
+|----|------|----------|--------|------|
+| TARGET-01 | ディレクトリ指定 | 配下の設定ファイルを全て集める | resolveBuildTargets.test.ts | ✅ |
+| TARGET-02 | `at-book.config.json` 指定 | その設定の autoGenerate だけ | resolveBuildTargets.test.ts | ✅ |
+| TARGET-03 | `.atb` 指定 | その原稿だけ（autoGenerate は見ない） | resolveBuildTargets.test.ts | ✅ |
+| TARGET-04 | 設定に outDir | 出力先に反映される | resolveBuildTargets.test.ts | ✅ |
+| TARGET-05 | 存在しないパス | `targetMissing` | resolveBuildTargets.test.ts | ✅ |
+| TARGET-06 | autoGenerate の原稿が無い | `atbMissing` | resolveBuildTargets.test.ts | ✅ |
+| TARGET-07 | 壊れた設定ファイル | `configInvalid`（autoGenerate 未設定と区別） | resolveBuildTargets.test.ts | ✅ |
+| TARGET-08 | 対象ゼロのディレクトリ | `noAutoGenerate`(tree) | resolveBuildTargets.test.ts | ✅ |
+| TARGET-09 | autoGenerate の無い設定ファイル指定 | `noAutoGenerate`(config) | resolveBuildTargets.test.ts | ✅ |
+| TARGET-10 | 引数省略 | カレントディレクトリを対象にする | resolveBuildTargets.test.ts | ✅ |
+
+## 12. 設定ファイルの初期生成 — `usecase/initConfig.ts`
+
+| ID | 条件 | 期待結果 | テスト | 状態 |
+|----|------|----------|--------|------|
+| INIT-01 | 設定ファイルが無い | 既定の内容で書き、パスを返す | initConfig.test.ts | ✅ |
+| INIT-02 | 既に設定ファイルがある | 上書きせず `alreadyExists` | initConfig.test.ts | ✅ |
+| INIT-03 | フォルダに `.atb` がある | autoGenerate に名前順で並べる | initConfig.test.ts | ✅ |
+| INIT-04 | `.atb` が無い | autoGenerate にプレースホルダー | initConfig.test.ts | ✅ |
+
+## 13. ユースケース結線（fake ポートで検証）
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
@@ -128,8 +193,46 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | UC-02 | `convertAtbToPdf` の出力パス | 渡された outDir 配下の `{base}-honbun.pdf` | convertAtb.test.ts | ✅ |
 | UC-03 | `convertAtbToPdf` の charCount | 入力本文の文字数を返す | convertAtb.test.ts | ✅ |
 | UC-04 | `generateCoverTemplate` | fileWriter に SVG を書き、svgPath を返す | generateCoverTemplate.test.ts | ✅ |
+| UC-05 | `convertAtbToWeb` | outDir 直下の作品フォルダへ話ファイルを書く | convertAtbToWeb.test.ts | ✅ |
+| UC-06 | `convertAtbToWeb` の章分割 | 連番付きの章フォルダの下に話ファイル | convertAtbToWeb.test.ts | ✅ |
+| UC-07 | `atbConverter` | parse と render を結線し、EPUB は spine 分割まで行う | atbConverter.test.ts | ✅ |
 
-## 9. E2E（Vivliostyle のヘッドレスブラウザが必要 / `it.skipIf` で保護）
+## 14. ファイル入出力 — `infrastructure/fileReader.ts` / `fileWriter.ts`
+
+| ID | 条件 | 期待結果 | テスト | 状態 |
+|----|------|----------|--------|------|
+| IO-01 | UTF-8 のテキスト | そのまま読む | fileReader.test.ts | ✅ |
+| IO-02 | 存在しないファイル | エラーになる | fileReader.test.ts | ✅ |
+| IO-03 | 中間ディレクトリが無い | 作ってから書く | fileWriter.test.ts | ✅ |
+| IO-04 | 既存ファイル | 上書きする | fileWriter.test.ts | ✅ |
+
+## 15. 組版の起動と後始末 — `infrastructure/vivliostyleRunner.ts`
+
+vivliostyle CLI（＝ヘッドレスブラウザ）は起動せず、コマンドの組み立てとビルドディレクトリの扱いを検証する。
+
+| ID | 条件 | 期待結果 | テスト | 状態 |
+|----|------|----------|--------|------|
+| RUN-01 | PDF 組版 | 隔離ディレクトリに HTML とフォントを置いて `build -o <出力>` を起動 | vivliostyleRunner.test.ts | ✅ |
+| RUN-02 | PDF 組版に成功 | 隔離ディレクトリを片付ける | vivliostyleRunner.test.ts | ✅ |
+| RUN-03 | 出力先に既存の `fonts/` | 後始末で巻き込んで消さない | vivliostyleRunner.test.ts | ✅ |
+| RUN-04 | PDF 組版に失敗 | 隔離ディレクトリを残し、場所を知らせる | vivliostyleRunner.test.ts | ✅ |
+| RUN-05 | `AT_BOOK_CHROME` が実在パス | `--executable-browser` に渡す | vivliostyleRunner.test.ts | ✅ |
+| RUN-06 | `AT_BOOK_CHROME` 未指定で失敗 | 指定方法を案内する（指定済みなら重ねない） | vivliostyleRunner.test.ts | ✅ |
+| RUN-07 | 投げ直したエラー | 元の例外を `cause` に残す | vivliostyleRunner.test.ts | ✅ |
+| RUN-08 | EPUB 組版 | 隔離ディレクトリにセクションと設定を置いて組み、片付ける | vivliostyleRunner.test.ts | ✅ |
+| RUN-09 | 縦組みの EPUB | 生成後の OPF に `primary-writing-mode` を注入 | vivliostyleRunner.test.ts | ✅ |
+| RUN-10 | 生成済み PDF | ページ数を読む（壊れている・無い場合は `undefined`） | vivliostyleRunner.test.ts | ✅ |
+
+## 16. EPUB の後処理 — `infrastructure/epubPostProcess.ts`
+
+| ID | 条件 | 期待結果 | テスト | 状態 |
+|----|------|----------|--------|------|
+| EPUB-01 | 縦組み | OPF の metadata に `primary-writing-mode` を注入 | epubPostProcess.test.ts | ✅ |
+| EPUB-02 | 再梱包 | `mimetype` を先頭・無圧縮のまま保つ | epubPostProcess.test.ts | ✅ |
+| EPUB-03 | 二重呼び出し | 注入は一度だけ（冪等） | epubPostProcess.test.ts | ✅ |
+| EPUB-04 | `</metadata>` が無い OPF | 何もせず素通し | epubPostProcess.test.ts | ✅ |
+
+## 17. E2E（Vivliostyle のヘッドレスブラウザが必要 / `it.skipIf` で保護）
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|

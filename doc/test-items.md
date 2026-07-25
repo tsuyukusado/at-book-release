@@ -79,17 +79,7 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | FONT-01 | PDF の本文フォント | `@font-face` で同梱フォントを埋め込み、`font-family: "Shippori Mincho", serif` | htmlRenderer.test.ts | ✅ |
 | FONT-02 | EPUB の本文フォント | `@font-face` を出さず `font-family: serif`（読者の端末のフォントに委ねる） | htmlRenderer.test.ts | ✅ |
 
-## 4. 文字数カウント — `usecase/countChars.ts` `countChars`
-
-| ID | 条件 | 期待結果 | テスト | 状態 |
-|----|------|----------|--------|------|
-| COUNT-01 | 通常段落 | 文字数を正しく数える | countChars.test.ts | ⬜ |
-| COUNT-02 | ルビ `＠語（読み）` | 本文+読みの両方を数える（語+読み） | countChars.test.ts | ⬜ |
-| COUNT-03 | 見出し・リスト行 | カウント対象に含む | countChars.test.ts | ⬜ |
-| COUNT-04 | 空行・目次・改ページ | カウント対象外（0） | countChars.test.ts | ⬜ |
-| COUNT-05 | 複数行の合算 | 全行の合計 | countChars.test.ts | ⬜ |
-
-## 5. 背幅計算 — `domain/coverSpec.ts` `calcSpineWidthMm`
+## 4. 背幅計算 — `domain/coverSpec.ts` `calcSpineWidthMm`
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
@@ -98,7 +88,7 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | SPINE-03 | 表紙紙厚を変更 | 背幅が連動（0.40→8.0mm） | svgCoverRenderer.test.ts | ✅ |
 | SPINE-04 | 奇数ページ | `ceil(pageCount/2)` で計算 | coverSpec.test.ts | ⬜ |
 
-## 6. 表紙 SVG — `adapter/cover/svgCoverRenderer.ts` `renderCoverSvg`
+## 5. 表紙 SVG — `adapter/cover/svgCoverRenderer.ts` `renderCoverSvg`
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
@@ -110,19 +100,19 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | COVER-06 | 背幅 < 5mm | 背ラベルを出力しない | svgCoverRenderer.test.ts | ⬜ |
 | COVER-07 | viewBox / width / height | 塗り足し込みの入稿サイズで出力 | svgCoverRenderer.test.ts | ⬜ |
 
-## 7. 設定読み込み — `infrastructure/configReader.ts` `nodeConfigReader`
+## 6. 設定読み込み — `infrastructure/configReader.ts` `nodeConfigReader`
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
 | CONF-01 | 正常な config.json | 値を読み取って返す | configReader.test.ts | ⬜ |
 | CONF-02 | 不正な paperSize | デフォルト（a6）にフォールバック | configReader.test.ts | ⬜ |
-| CONF-03 | 不正な writingMode | デフォルト（horizontal）にフォールバック | configReader.test.ts | ⬜ |
+| CONF-03 | 不正な writingMode | デフォルト（vertical）にフォールバック | configReader.test.ts | ⬜ |
 | CONF-04 | 紙厚が 0 以下/数値でない | `undefined` | configReader.test.ts | ⬜ |
 | CONF-05 | autoGenerate が配列 | 文字列要素のみ抽出 | configReader.test.ts | ⬜ |
 | CONF-06 | autoGenerate が非配列 | `undefined` | configReader.test.ts | ⬜ |
 | CONF-07 | ファイル無し / 壊れた JSON | `defaultPaperConfig` を返す | configReader.test.ts | ⬜ |
 
-## 8. 設定探索 — `infrastructure/configFinder.ts` `findConfigDirs`
+## 7. 設定探索 — `infrastructure/configFinder.ts` `findConfigDirs`
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
@@ -130,34 +120,16 @@ at-book の各機能が正しく動くことを検証するためのテスト項
 | FIND-02 | 入れ子ディレクトリ | 再帰的に全て検出 | configFinder.test.ts | ⬜ |
 | FIND-03 | node_modules / .git / dist | スキップする | configFinder.test.ts | ⬜ |
 
-## 9. ログ出力 — `infrastructure/charCountLogger.ts` `appendCharCount`
-
-| ID | 条件 | 期待結果 | テスト | 状態 |
-|----|------|----------|--------|------|
-| LOG-01 | charDiff 正/負/0 | `+N` / `-N` / `±0` の符号表記 | charCountLogger.test.ts | ⬜ |
-| LOG-02 | isNew=true | `(新規)` 表記 | charCountLogger.test.ts | ⬜ |
-| LOG-03 | pageCount あり | ページ数行を出力（差分付き） | charCountLogger.test.ts | ⬜ |
-| LOG-04 | commitHash あり | コミット行（短縮7桁+メッセージ） | charCountLogger.test.ts | ⬜ |
-| LOG-05 | ログファイルが無い | ディレクトリを作って追記 | charCountLogger.test.ts | ⬜ |
-
-## 10. カウント状態 — `infrastructure/countState.ts`
-
-| ID | 条件 | 期待結果 | テスト | 状態 |
-|----|------|----------|--------|------|
-| STATE-01 | 正常な state ファイル | 読み取って返す | countState.test.ts | ⬜ |
-| STATE-02 | キー欠損 / 壊れたファイル | `{pages:{},chars:{}}` のデフォルト | countState.test.ts | ⬜ |
-| STATE-03 | write→read 往復 | 同じ内容が復元される | countState.test.ts | ⬜ |
-
-## 11. ユースケース結線（fake ポートで検証）
+## 8. ユースケース結線（fake ポートで検証）
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|
 | UC-01 | `convertAtbToPdf` | ファイル読込→変換→compile の順で呼ぶ | convertAtbToPdf.test.ts | ⬜ |
-| UC-02 | `convertAtbToPdf` の出力パス | `dist/at-book/{base}-honbun.pdf` | convertAtbToPdf.test.ts | ⬜ |
+| UC-02 | `convertAtbToPdf` の出力パス | 渡された outDir 配下の `{base}-honbun.pdf` | convertAtbToPdf.test.ts | ⬜ |
 | UC-03 | `convertAtbToPdf` の charCount | 入力本文の文字数を返す | convertAtbToPdf.test.ts | ⬜ |
 | UC-04 | `generateCoverTemplate` | fileWriter に SVG を書き、svgPath を返す | generateCoverTemplate.test.ts | ⬜ |
 
-## 12. E2E（Vivliostyle のヘッドレスブラウザが必要 / `it.skipIf` で保護）
+## 9. E2E（Vivliostyle のヘッドレスブラウザが必要 / `it.skipIf` で保護）
 
 | ID | 条件 | 期待結果 | テスト | 状態 |
 |----|------|----------|--------|------|

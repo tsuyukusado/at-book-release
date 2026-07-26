@@ -27,10 +27,10 @@ const base: PaperConfig = { paperSize: 'a6', writingMode: 'horizontal' };
 describe('convertAtb のフォーマット振り分け', () => {
     it('formats 未指定なら pdf のみ生成し、ページ数を返す', async () => {
         const { deps, calls } = makeDeps(base);
-        const out = await convertAtb(deps, { atbPath: 'doc/test.atb' });
-        expect(calls.pdf).toEqual(['dist/at-book/test-honbun.pdf']);
+        const out = await convertAtb(deps, { atbPath: 'doc/test.atb', outDir: 'doc/dist' });
+        expect(calls.pdf).toEqual(['doc/dist/test-honbun.pdf']);
         expect(calls.epub).toEqual([]);
-        expect(out.pdfPath).toBe('dist/at-book/test-honbun.pdf');
+        expect(out.pdfPath).toBe('doc/dist/test-honbun.pdf');
         expect(out.epubPath).toBeUndefined();
         expect(out.pageCount).toBe(42);
         expect(out.formats).toEqual(['pdf']);
@@ -38,31 +38,31 @@ describe('convertAtb のフォーマット振り分け', () => {
 
     it('formats:["epub"] なら epub のみ生成し、ページ数は 0', async () => {
         const { deps, calls } = makeDeps({ ...base, formats: ['epub'] });
-        const out = await convertAtb(deps, { atbPath: 'doc/test.atb' });
+        const out = await convertAtb(deps, { atbPath: 'doc/test.atb', outDir: 'doc/dist' });
         expect(calls.pdf).toEqual([]);
-        expect(calls.epub).toEqual(['dist/at-book/test.epub']);
+        expect(calls.epub).toEqual(['doc/dist/test.epub']);
         expect(out.pdfPath).toBeUndefined();
-        expect(out.epubPath).toBe('dist/at-book/test.epub');
+        expect(out.epubPath).toBe('doc/dist/test.epub');
         expect(out.pageCount).toBe(0);
     });
 
     it('formats:["pdf","epub"] なら両方生成する', async () => {
         const { deps, calls } = makeDeps({ ...base, formats: ['pdf', 'epub'] });
-        const out = await convertAtb(deps, { atbPath: 'doc/test.atb' });
-        expect(calls.pdf).toEqual(['dist/at-book/test-honbun.pdf']);
-        expect(calls.epub).toEqual(['dist/at-book/test.epub']);
-        expect(out.pdfPath).toBe('dist/at-book/test-honbun.pdf');
-        expect(out.epubPath).toBe('dist/at-book/test.epub');
+        const out = await convertAtb(deps, { atbPath: 'doc/test.atb', outDir: 'doc/dist' });
+        expect(calls.pdf).toEqual(['doc/dist/test-honbun.pdf']);
+        expect(calls.epub).toEqual(['doc/dist/test.epub']);
+        expect(out.pdfPath).toBe('doc/dist/test-honbun.pdf');
+        expect(out.epubPath).toBe('doc/dist/test.epub');
         expect(out.pageCount).toBe(42);
     });
 
     it('epub のページ送り方向は組み方向に従う（縦書き=rtl・横書き=ltr）', async () => {
         const v = makeDeps({ ...base, writingMode: 'vertical', formats: ['epub'] });
-        await convertAtb(v.deps, { atbPath: 'doc/test.atb' });
+        await convertAtb(v.deps, { atbPath: 'doc/test.atb', outDir: 'doc/dist' });
         expect(v.calls.epubDir).toEqual(['rtl']);
 
         const h = makeDeps({ ...base, writingMode: 'horizontal', formats: ['epub'] });
-        await convertAtb(h.deps, { atbPath: 'doc/test.atb' });
+        await convertAtb(h.deps, { atbPath: 'doc/test.atb', outDir: 'doc/dist' });
         expect(h.calls.epubDir).toEqual(['ltr']);
     });
 
@@ -83,7 +83,7 @@ describe('convertAtb のフォーマット振り分け', () => {
                 async compileEpub() {},
             },
         };
-        await convertAtb(deps, { atbPath: 'doc/test.atb' });
+        await convertAtb(deps, { atbPath: 'doc/test.atb', outDir: 'doc/dist' });
         expect(convertFormats).toEqual(['pdf']);
         expect(epubSectionsCalls).toBe(1);
     });
@@ -98,7 +98,7 @@ describe('convertAtb のフォーマット振り分け', () => {
                 convertEpubSections: () => { convertCount++; return [{ fileName: 'part-001.html', html: '<html></html>' }]; },
             },
         };
-        const out = await convertAtb(spied, { atbPath: 'doc/test.atb' });
+        const out = await convertAtb(spied, { atbPath: 'doc/test.atb', outDir: 'doc/dist' });
         expect(convertCount).toBe(0);
         expect(calls.pdf).toEqual([]);
         expect(calls.epub).toEqual([]);
@@ -106,5 +106,11 @@ describe('convertAtb のフォーマット振り分け', () => {
         expect(out.epubPath).toBeUndefined();
         expect(out.pageCount).toBe(0);
         expect(out.formats).toEqual(['web']);
+    });
+
+    it('総文字数（charCount）は読み込んだ本文の文字数を返す', async () => {
+        const { deps } = makeDeps(base); // fileReader は「あいうえお」を返す
+        const out = await convertAtb(deps, { atbPath: 'doc/test.atb', outDir: 'doc/dist' });
+        expect(out.charCount).toBe(5);
     });
 });

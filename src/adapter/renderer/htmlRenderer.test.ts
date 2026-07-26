@@ -16,6 +16,11 @@ function sections(src: string, config: PaperConfig = horizontal): string[] {
     return renderSections(parse(src), config).map(s => s.html);
 }
 
+// 最後の spine は奥付（クレジット）で固定なので、本文の分割だけを見るテストでは外す。
+function bodySections(src: string, config: PaperConfig = horizontal): string[] {
+    return sections(src, config).slice(0, -1);
+}
+
 // <body> の中身だけ取り出す。CSS のコメントやセレクタ名（例: 「最後」の「後」や
 // .atb-pagebreak）に本文判定が引っかからないようにするため。
 function bodyOf(doc: string): string {
@@ -244,12 +249,35 @@ describe('ページ設定 CSS', () => {
         expect(epub).toContain('text-combine-upright: all;');
         expect(epub).toContain('-epub-text-combine-upright: all;');
         expect(epub).toContain('-webkit-text-combine: horizontal;');
-        expect(epub).toContain('text-combine: horizontal;');
+        expect(epub).toContain('-epub-text-combine: horizontal;');
+        // 無接頭辞の text-combine は実装するリーダーが無い草案時代のプロパティで、
+        // EPUBCheck の CSS 警告になるだけなので出さない。
+        expect(epub).not.toMatch(/[^-]text-combine:\s*horizontal/);
         // PDF(Vivliostyle) は標準構文で足りるので EPUB 専用の互換構文は出さない。
         const pdf = render(parse('本当に！？'), vertical, 'pdf');
         expect(pdf).toContain('text-combine-upright: all;');
         expect(pdf).not.toContain('-epub-text-combine-upright');
         expect(pdf).not.toContain('text-combine: horizontal;');
+    });
+
+    it('[FONT-01] PDF は同梱フォントを @font-face で埋め込む', () => {
+        // 紙面を固定する成果物なので、環境によって書体が変わらないよう同梱フォントを使う。
+        const pdf = render(parse('文'), vertical, 'pdf');
+        expect(pdf).toContain('@font-face');
+        expect(pdf).toContain('src: url("fonts/ShipporiMincho-Regular.ttf") format("truetype");');
+        expect(pdf).toContain('src: url("fonts/ShipporiMincho-Bold.ttf") format("truetype");');
+        expect(pdf).toContain('font-family: "Shippori Mincho", serif;');
+    });
+
+    it('[FONT-02] EPUB は本文フォントを埋め込まず、読者の端末のフォントに委ねる', () => {
+        // EPUB はビルドディレクトリの中身がそのまま同梱されるため、@font-face を出すと
+        // 本文数十KB に対して 17MB の TTF が入り、配信サイズが跳ね上がる。
+        const epub = render(parse('文'), vertical, 'epub');
+        expect(epub).not.toContain('@font-face');
+        // フォント実体への参照が無いこと（CSS コメント中の言及は無害なので名前では判定しない）。
+        expect(epub).not.toContain('src: url("fonts/');
+        expect(epub).not.toContain('font-family: "Shippori Mincho"');
+        expect(epub).toContain('font-family: serif;');
     });
 
     it('用紙サイズが @page size に反映される（a6 = 105mm 148mm）', () => {
@@ -295,6 +323,21 @@ describe('ページ設定 CSS', () => {
         expect(a6).toMatch(/\.atb-colophon\s*\{[^}]*white-space:\s*nowrap/);
     });
 
+    it('紙面固定の CSS（@page・ノンブル・コロフォン）は EPUB には出さない', () => {
+        // ページメディア専用の機構で、リフロー型リーダーは解釈しない。README の
+        // 「ノンブル・綴じ代・コロフォンは PDF 専用」どおり EPUB からは丸ごと外す。
+        const epub = render(parse('文'), vertical, 'epub');
+        expect(epub).not.toContain('@page');
+        expect(epub).not.toContain('counter(page)');
+        // コロフォンの実体（render の PDF 出力）も EPUB には出さない。
+        // EPUB のクレジットは renderSections が最後の spine に単独で置く。
+        expect(epub).not.toContain('class="atb-colophon"');
+        expect(epub).not.toContain('position: running');
+        const pdf = render(parse('文'), vertical, 'pdf');
+        expect(pdf).toContain('@page');
+        expect(pdf).toContain('.atb-colophon');
+    });
+
     it('ノンブルは小口側の隅ボックス（本文の外）に置かれる', () => {
         // 縦書き(右綴じ): recto(:left) は小口=左 → @bottom-left-corner
         const v = html('文', vertical);
@@ -307,14 +350,14 @@ describe('ページ設定 CSS', () => {
 
 describe('EPUB の spine 分割（renderSections）', () => {
     it('改ページが無ければ 1 つの spine 文書になる', () => {
-        const s = sections('ひとつめ\nふたつめ');
+        const s = bodySections('ひとつめ\nふたつめ');
         expect(s).toHaveLength(1);
         expect(bodyOf(s[0]!)).toContain('ひとつめ');
         expect(bodyOf(s[0]!)).toContain('ふたつめ');
     });
 
     it('EPUB の空行 div は中身に &#160; を持ち、空ブロックで潰れて消えないようにする', () => {
-        const s = sections('前\n\n後');
+        const s = bodySections('前\n\n後');
         expect(bodyOf(s[0]!)).toContain('<div class="atb-blank">&#160;</div>');
     });
 
@@ -328,7 +371,7 @@ describe('EPUB の spine 分割（renderSections）', () => {
     });
 
     it('＠＠＠ で spine が分割され、改ページ用の div は残さない', () => {
-        const s = sections('前\n＠＠＠\n後');
+        const s = bodySections('前\n＠＠＠\n後');
         expect(s).toHaveLength(2);
         expect(bodyOf(s[0]!)).toContain('前');
         expect(bodyOf(s[0]!)).not.toContain('後');
@@ -339,7 +382,7 @@ describe('EPUB の spine 分割（renderSections）', () => {
     });
 
     it('大見出し（＠）は新しい spine から始まる', () => {
-        const s = sections('本文0\n＠あたらしい章\n本文2');
+        const s = bodySections('本文0\n＠あたらしい章\n本文2');
         expect(s).toHaveLength(2);
         expect(bodyOf(s[0]!)).toContain('本文0');
         expect(bodyOf(s[0]!)).not.toContain('あたらしい章');
@@ -348,7 +391,7 @@ describe('EPUB の spine 分割（renderSections）', () => {
     });
 
     it('目次（＠目次）は前後で分割され、単独の spine 文書になる', () => {
-        const s = sections('前文\n＠目次\n後文');
+        const s = bodySections('前文\n＠目次\n後文');
         expect(s).toHaveLength(3);
         expect(bodyOf(s[0]!)).toContain('前文');
         expect(bodyOf(s[1]!)).toContain('atb-toc-title');
@@ -357,15 +400,29 @@ describe('EPUB の spine 分割（renderSections）', () => {
         expect(bodyOf(s[2]!)).toContain('後文');
     });
 
-    it('コロフォンは最後の spine 文書にだけ入る', () => {
-        const s = sections('前\n＠＠＠\n後');
-        expect(bodyOf(s[0]!)).not.toContain('atb-colophon');
-        expect(bodyOf(s[s.length - 1]!)).toContain('atb-colophon');
+    it('クレジットは最後の spine に単独で入る（奥付ページ）', () => {
+        // リフロー型リーダーは position:running を解釈しないため、本文の流れに足すと
+        // 読み物の途中に地の文として混ざる。1 文書＝1 ページの奥付として独立させる。
+        const all = sections('前\n＠＠＠\n後');
+        const colophon = all[all.length - 1]!;
+        expect(bodyOf(colophon)).toContain('atb-colophon');
+        expect(bodyOf(colophon)).toContain('Created with at-book');
+        // 本文側には混ざらない。
+        for (const doc of all.slice(0, -1)) {
+            expect(bodyOf(doc)).not.toContain('atb-colophon');
+        }
+    });
+
+    it('本文が空でも spine は 0 件にならない（spine 0 件は EPUB として不正）', () => {
+        const all = sections('');
+        expect(all.length).toBeGreaterThan(0);
+        expect(bodyOf(all[all.length - 1]!)).toContain('atb-colophon');
     });
 
     it('各 spine に連番のファイル名が付く', () => {
         const s = renderSections(parse('＠一\n本文\n＠二\n本文'), horizontal);
-        expect(s.map(x => x.fileName)).toEqual(['part-001.html', 'part-002.html']);
+        // 本文 2 つ + 奥付 1 つ。
+        expect(s.map(x => x.fileName)).toEqual(['part-001.html', 'part-002.html', 'part-003.html']);
     });
 
     it('目次リンクは、見出しが実在する spine ファイルへのクロスファイル参照になる', () => {
@@ -390,5 +447,42 @@ describe('EPUB の spine 分割（renderSections）', () => {
         const pdf = render(parse('＠目次\n＠第一章\n本文'), horizontal, 'pdf');
         expect(pdf).toContain('href="#atb-h1"');
         expect(pdf).not.toContain('.xhtml#atb-h1');
+    });
+});
+
+describe('用紙サイズごとの @page size', () => {
+    it('a4 は 210mm 297mm', () => {
+        expect(html('本文', { paperSize: 'a4', writingMode: 'horizontal' })).toContain('size: 210mm 297mm');
+    });
+
+    it('a5 は 148mm 210mm', () => {
+        expect(html('本文', { paperSize: 'a5', writingMode: 'horizontal' })).toContain('size: 148mm 210mm');
+    });
+
+    it('b5 は 182mm 257mm', () => {
+        expect(html('本文', { paperSize: 'b5', writingMode: 'horizontal' })).toContain('size: 182mm 257mm');
+    });
+});
+
+describe('章番号の漢数字（10 以上）', () => {
+    it('10 以上の章番号も正しい漢数字になる（十・十二・二十・二十一）', () => {
+        const src = Array.from({ length: 21 }, () => '＠章').join('\n');
+        const out = bodyOf(html(src, vertical));
+        expect(out).toContain('十二');
+        expect(out).toContain('二十一');
+        // 10・20 ちょうど（一の位ゼロ）は末尾に余計な数字が付かない。
+        expect(out).toContain('十');
+        expect(out).toContain('二十');
+    });
+});
+
+describe('リストの入れ子の閉じ', () => {
+    it('深いリストから浅いリストへ戻るとき ul を閉じる', () => {
+        const src = '・親その一\n　・子ども\n・親その二';
+        const out = bodyOf(html(src, horizontal));
+        expect(out.split('<ul class="atb-list">').length - 1).toBe(2);
+        expect(out.split('</ul>').length - 1).toBe(2);
+        // 2 番目の親項目は入れ子の外（子リストの閉じの後）に来る。
+        expect(out.indexOf('親その二')).toBeGreaterThan(out.indexOf('</ul>'));
     });
 });

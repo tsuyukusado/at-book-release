@@ -1,38 +1,56 @@
 {
   "name": "at-book",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "日本語小説のための執筆記法「＠本」。.atb 原稿から縦書き PDF / EPUB / ウェブ投稿用テキストを生成する組版 CLI",
   "bin": {
     "at-book": "./dist/cli/index.js"
   },
+  "files": [
+    "dist",
+    "fonts"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
-    "build": "tsc",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc",
     "start": "node dist/cli/index.js",
     "test": "vitest run",
-    "setup": "npm run build && npm link && git config core.hooksPath .githooks",
-    "prepare": "npm run build && git config core.hooksPath .githooks"
+    "test:coverage": "vitest run --coverage",
+    "setup": "npm run build && npm link",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tsuyukusado/at-book.git"
+    "url": "git+https://github.com/tsuyukusado/at-book-release.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "novel",
+    "japanese",
+    "typesetting",
+    "vertical-writing",
+    "epub",
+    "pdf",
+    "vivliostyle",
+    "atb"
+  ],
+  "author": "tsuyukusado",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/tsuyukusado/at-book/issues"
+    "url": "https://github.com/tsuyukusado/at-book-release/issues"
   },
-  "homepage": "https://github.com/tsuyukusado/at-book#readme",
+  "homepage": "https://github.com/tsuyukusado/at-book-release#readme",
   "dependencies": {
-    "@vivliostyle/cli": "^8.0.0",
+    "@vivliostyle/cli": "^11.1.0",
     "archiver": "^5.3.2",
     "node-stream-zip": "^1.15.0",
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   }

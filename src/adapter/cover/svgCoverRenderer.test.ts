@@ -19,6 +19,29 @@ describe('紙厚の変更が背幅に反映される', () => {
         expect(svg).toContain(`背 ${EXPECTED_SPINE_MM}mm`);
     });
 
+    it('paperSize=a6 なら実寸 105×148mm がキャンバスに反映される（塗り足し3mm込み）', () => {
+        // 幅 = 3 + 105 + 7.9 + 105 + 3 = 223.9 / 高さ = 3 + 148 + 3 = 154
+        const svg = renderCoverSvg({ ...baseSpec, paperSize: 'a6' });
+        expect(svg).toContain('viewBox="0 0 223.9 154"');
+    });
+
+    it('paperSize ごとの実寸が反映される（a5=148×210 / b5=182×257）', () => {
+        expect(renderCoverSvg({ ...baseSpec, paperSize: 'a5' })).toContain('viewBox="0 0 309.9 216"');
+        expect(renderCoverSvg({ ...baseSpec, paperSize: 'b5' })).toContain('viewBox="0 0 377.9 263"');
+    });
+
+    it('viewBox と width / height は塗り足し込みの入稿サイズ（mm）で一致する', () => {
+        const svg = renderCoverSvg({ ...baseSpec, paperSize: 'a6' });
+        expect(svg).toContain('width="223.9mm"');
+        expect(svg).toContain('height="154mm"');
+    });
+
+    it('背幅が 5mm 未満なら背ラベルを出力しない', () => {
+        // ceil(20/2) * 0.09 + 0.35 * 2 = 0.9 + 0.7 = 1.6mm < 5mm
+        const svg = renderCoverSvg({ ...baseSpec, pageCount: 20 });
+        expect(svg).not.toContain('背 ');
+    });
+
     it('本文紙厚を変えると背幅が変わる', () => {
         // ceil(160/2) * 0.12 + 0.35 * 2 = 80 * 0.12 + 0.7 = 9.6 + 0.7 = 10.3
         const svg = renderCoverSvg({ ...baseSpec, bodyPaperThicknessMm: 0.12 });

@@ -128,9 +128,11 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
     const colophonFontPt = fitColophonFontPt(widthMm - inner - outer);
 
     // 縦中横の宣言群。認識する構文がリーダーごとに違うため、EPUB では標準・WebKit(新)・
-    // EPUB3・レガシー(旧 WebKit) の全構文を併記して広く網を張る。Kindle など旧エンジンは
-    // 標準の text-combine-upright を無視し、レガシーの -webkit-text-combine: horizontal
-    // だけを解釈することがあり、これが無いと ！？ が縦中横にならず倒れる。
+    // EPUB3・レガシー(旧 WebKit / EPUB3 プロファイル) の全構文を併記して広く網を張る。
+    // Kindle など旧エンジンは標準の text-combine-upright を無視し、レガシーの
+    // -webkit-text-combine: horizontal だけを解釈することがあり、これが無いと ！？ が
+    // 縦中横にならず倒れる。無接頭辞の text-combine はどのリーダーも実装していない
+    // 草案時代のプロパティなので出さない（EPUBCheck の CSS 警告になるだけ）。
     // PDF(Vivliostyle) は標準構文で足りるので併記しない。
     const tcyDecls = format === 'epub'
         ? [
@@ -138,15 +140,37 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
             '-webkit-text-combine-upright: all;',
             '-epub-text-combine-upright: all;',
             '-webkit-text-combine: horizontal;',
-            'text-combine: horizontal;',
+            '-epub-text-combine: horizontal;',
           ].join('\n  ')
         : [
             'text-combine-upright: all;',
             '-webkit-text-combine-upright: all;',
           ].join('\n  ');
 
-    return `
-@page {
+    // 本文フォント。PDF は紙面を固定する成果物なので、環境によって書体が変わらないよう
+    // 同梱の Shippori Mincho を @font-face で埋め込む（実体は組版時にビルドディレクトリへ
+    // コピーされ、PDF にはサブセットだけが残る）。
+    // EPUB は埋め込まず、読者の端末のフォントに委ねる。リフロー型の一般的な作法であり、
+    // かつ EPUB はビルドディレクトリの中身がそのまま同梱されるため、埋め込むと本文数十KB
+    // に対して 17MB の TTF が入って配信サイズが跳ね上がる。
+    const fontFaceCss = format === 'epub' ? '' : `@font-face {
+  font-family: "Shippori Mincho";
+  font-weight: normal;
+  src: url("fonts/ShipporiMincho-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Shippori Mincho";
+  font-weight: bold;
+  src: url("fonts/ShipporiMincho-Bold.ttf") format("truetype");
+}
+`;
+    const bodyFontFamily = format === 'epub' ? 'serif' : '"Shippori Mincho", serif';
+
+    // 紙面固定（ページメディア）の CSS 一式。@page とノンブルはページメディア専用の
+    // 機構で、リフロー型 EPUB リーダーは解釈しないため EPUB には出さない。
+    // コロフォンもここでは position:running（＝最終ページのフッターへ流す）を使うので
+    // PDF 専用。EPUB では最後の spine を丸ごと奥付にして出す（colophonCss を参照）。
+    const pageCss = format === 'epub' ? '' : `@page {
   size: ${widthMm}mm ${heightMm}mm;
   margin-top: 10mm;
   margin-bottom: 10mm;
@@ -167,19 +191,35 @@ function buildCss(config: PaperConfig, format: 'pdf' | 'epub'): string {
   ${nombreBox(verso.nombre)}
 }
 
-@font-face {
-  font-family: "Shippori Mincho";
-  font-weight: normal;
-  src: url("fonts/ShipporiMincho-Regular.ttf") format("truetype");
+/* コロフォン: 流れからは外し、最終ページのフッター中央にのみ出す。
+   縦書きでも横組みで出すため writing-mode を明示する（element() で引くと元の縦組みを保持するため）。
+   font-size は版面幅に収める縮小値をここ（実行要素側）に指定する（@bottom-center 側は効かない）。
+   white-space:nowrap で 1 行に保ち、版面幅に収まる font-size なので左右が切れない。 */
+.atb-colophon {
+  position: running(atb-colophon);
+  writing-mode: horizontal-tb;
+  white-space: nowrap;
+  font-size: ${colophonFontPt}pt;
 }
-@font-face {
-  font-family: "Shippori Mincho";
-  font-weight: bold;
-  src: url("fonts/ShipporiMincho-Bold.ttf") format("truetype");
-}
+`;
 
+    // EPUB のコロフォン。リフロー型リーダーは position:running を解釈しないため、
+    // 最後の spine 文書を丸ごと奥付にして、その中に通常のブロックとして置く
+    // （本文の末尾に地の文として続くと読み物の途中に混ざってしまう）。
+    // 縦組みの本でもクレジットは欧文 1 行なので、この要素だけ横組みへ戻す
+    // （横組みの本では文書がもともと横組みなので、上書きは要らない）。
+    const colophonCss = format === 'epub' ? `
+/* 奥付（最後の spine 文書に単独で入る） */
+.atb-colophon {
+  ${isVertical ? '-epub-writing-mode: horizontal-tb;\n  writing-mode: horizontal-tb;\n  ' : ''}text-align: center;
+  font-size: 0.75em;
+}
+` : '';
+
+    return `
+${pageCss}${fontFaceCss}
 html {
-  font-family: "Shippori Mincho", serif;
+  font-family: ${bodyFontFamily};
   font-size: 9pt;
   line-height: 1.75;
   ${isVertical ? (format === 'epub' ? '-epub-writing-mode: vertical-rl;\n  writing-mode: vertical-rl;' : 'writing-mode: vertical-rl;') : ''}
@@ -298,18 +338,7 @@ ruby.atb-kenten > rt > span {
 .atb-tcy {
   ${tcyDecls}
 }
-
-/* コロフォン: 流れからは外し、最終ページのフッター中央にのみ出す。
-   縦書きでも横組みで出すため writing-mode を明示する（element() で引くと元の縦組みを保持するため）。
-   font-size は版面幅に収める縮小値をここ（実行要素側）に指定する（@bottom-center 側は効かない）。
-   white-space:nowrap で 1 行に保ち、版面幅に収まる font-size なので左右が切れない。 */
-.atb-colophon {
-  position: running(atb-colophon);
-  writing-mode: horizontal-tb;
-  white-space: nowrap;
-  font-size: ${colophonFontPt}pt;
-}
-`.trim();
+${colophonCss}`.trim();
 }
 
 // ---- 本体 ------------------------------------------------------------------
@@ -524,7 +553,8 @@ export function render(nodes: ParsedNode[], config: PaperConfig, format: 'pdf' |
 
     const body = blocks.map(b => b.html);
     // コロフォンは流れの最後に置く（最終ページのフッターに実行組版される）。
-    body.push(COLOPHON_HTML);
+    // ページメディア専用の機構なので PDF のときだけ入れる。
+    if (format !== 'epub') body.push(COLOPHON_HTML);
 
     return wrapDocument(body.join('\n'), buildCss(config, format));
 }
@@ -577,9 +607,11 @@ export function renderSections(nodes: ParsedNode[], config: PaperConfig): EpubSe
     }
     flush();
 
-    // コロフォンは最後の spine 文書の流れの末尾へ。1 文書も無ければ 1 つ作る。
-    if (sections.length === 0) sections.push([]);
-    sections[sections.length - 1]!.push({ html: COLOPHON_HTML });
+    // コロフォンは最後の spine 文書に単独で入れて奥付にする。
+    // 本文の流れの末尾に足すと（PDF と違って position:running が効かないぶん）読み物の
+    // 途中に地の文として混ざるため、1 文書＝1 ページの独立した奥付にする。
+    // これで spine が必ず 1 つ以上になるので、原稿が空でも EPUB として成立する。
+    sections.push([{ html: COLOPHON_HTML }]);
 
     // 目次の #id を、その見出しが入った spine ファイルへのクロスファイル参照に置き換える。
     const rewriteTocLinks = (html: string): string =>

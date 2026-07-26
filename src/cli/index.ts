@@ -1,39 +1,12 @@
 #!/usr/bin/env node
 import * as path from "path";
-import { execSync } from "child_process";
-import { convertAtb, convertAtbToWeb } from "../usecase";
+import { readFileSync } from "fs";
+import { convertAtb, convertAtbToWeb, initConfig, resolveOutDir, resolveBuildTargets } from "../usecase";
+import type { BuildTarget, ResolveFailure } from "../usecase";
+import { DEFAULT_OUT_DIR_NAME, CONFIG_FILE_NAME } from "../domain";
 import { generateCoverTemplate } from "../usecase/generateCoverTemplate";
 import { atbConverter } from "../adapter/atbConverter";
-import { nodeFileReader, vivliostyleRunner, readPdfPageCount, nodeConfigReader, nodeFileWriter, ensureHookInstalled, findConfigDirs, appendCharCount, readCountState, writeCountState } from "../infrastructure";
-import { countChars } from "../usecase/countChars";
-
-// git コマンドを実行。失敗時（gitリポジトリでない・対象が存在しない等）は undefined を返す。
-function git(args: string): string | undefined {
-    try {
-        return execSync(`git ${args}`, { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] });
-    } catch {
-        return undefined;
-    }
-}
-
-// 指定コミットの .atb 内容を取得（存在しなければ undefined）。
-function gitShow(ref: string, atbPath: string): string | undefined {
-    return git(`show "${ref}:${atbPath}"`);
-}
-
-// 指定 ref の .atb 内容と現在の文字数を比較して差分を返す。
-// ref に当該ファイルが無ければ新規ファイル扱い（isNew=true）。
-function charDiffFromRef(ref: string, atbPath: string, currentCount: number): { charDiff?: number; isNew: boolean } {
-    const baseText = gitShow(ref, atbPath);
-    if (baseText === undefined) return { isNew: true };
-    return { charDiff: currentCount - countChars(baseText), isNew: false };
-}
-
-// 「前回コミットからの文字数差分」を git から算出する。
-// 親コミットに当該ファイルが無ければ新規ファイル扱い（isNew=true）。
-function charDiffFromParent(commit: string, atbPath: string, currentCount: number): { charDiff?: number; isNew: boolean } {
-    return charDiffFromRef(`${commit}~1`, atbPath, currentCount);
-}
+import { nodeFileReader, vivliostyleRunner, nodeConfigReader, nodeFileWriter, findConfigDirs, nodeStatKind, nodeExists, nodeListAtbFileNames } from "../infrastructure";
 
 async function runCover(args: string[]): Promise<void> {
     // 使い方: at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]
@@ -67,7 +40,9 @@ async function runCover(args: string[]): Promise<void> {
         process.exit(1);
     }
 
-    const outputPath = outputArg ?? path.join('dist', 'at-book', 'cover-template.svg');
+    // 原稿を伴わない単体実行なので、作品ディレクトリが定まらない。
+    // 出力先はカレントディレクトリ基準（または引数で明示）とする。
+    const outputPath = outputArg ?? path.join(config.outDir ?? DEFAULT_OUT_DIR_NAME, 'cover-template.svg');
 
     const { svgPath } = await generateCoverTemplate(
         { fileWriter: nodeFileWriter },
@@ -90,130 +65,8 @@ async function runCover(args: string[]): Promise<void> {
     console.log(`  背幅       : ${Math.round(spineWidth * 100) / 100}mm`);
 }
 
-const CHAR_COUNT_LOG = path.join('dist', 'at-book', 'char-count.log');
-const COUNT_STATE_FILE = path.join('dist', 'at-book', '.at-book-count.state');
-
-// 履歴ウォーク: 初回は全コミット、以降は前回処理した続きから新着コミットだけを処理し、
-// 各コミットで変更された .atb の文字数と「前回コミットからの差分」を char-count.log に記録する。
-// ※ ページ数は実際に組版しないと分からないため履歴では記録せず、今後の PDF 生成時にのみ記録する。
-async function runCountHistory(): Promise<void> {
-    const head = git("rev-parse HEAD")?.trim();
-    if (!head) {
-        console.error("エラー: gitリポジトリではないか、コミットがまだありません。");
-        process.exit(1);
-    }
-
-    const state = await readCountState(COUNT_STATE_FILE);
-    const firstRun = !state.lastCommit;
-    const range = state.lastCommit ? `${state.lastCommit}..HEAD` : "HEAD";
-
-    const revList = git(`rev-list --reverse ${range}`);
-    if (revList === undefined) {
-        console.error("エラー: コミット履歴を取得できませんでした。");
-        process.exit(1);
-    }
-    const commits = revList.split("\n").map(s => s.trim()).filter(Boolean);
-
-    if (commits.length === 0) {
-        console.log("新着コミットはありません。");
-        return;
-    }
-    console.log(firstRun
-        ? `初回実行: 全 ${commits.length} 件のコミットを処理します...`
-        : `新着 ${commits.length} 件のコミットを処理します...`);
-
-    let logged = 0;
-    for (const commit of commits) {
-        const changed = (git(`diff-tree --no-commit-id -r --name-only --diff-filter=AM --root ${commit}`) ?? "")
-            .split("\n").map(s => s.trim()).filter(f => f.endsWith(".atb"));
-        if (changed.length === 0) continue;
-
-        const message = git(`log -1 --format=%s ${commit}`)?.trim() ?? "";
-        const isoDate = git(`log -1 --format=%cI ${commit}`)?.trim();
-        const date = isoDate ? new Date(isoDate) : undefined;
-
-        for (const atbPath of changed) {
-            const curText = gitShow(commit, atbPath);
-            if (curText === undefined) continue;
-            const charCount = countChars(curText);
-            const { charDiff, isNew } = charDiffFromParent(commit, atbPath, charCount);
-
-            await appendCharCount(CHAR_COUNT_LOG, {
-                atbPath, charCount, commitHash: commit, commitMessage: message,
-                charDiff, isNew, date,
-            });
-
-            const diffStr = isNew ? "新規" : `前回比 ${charDiff! >= 0 ? "+" : ""}${charDiff!.toLocaleString("ja-JP")}文字`;
-            console.log(`  ${commit.slice(0, 7)} ${atbPath}: ${charCount.toLocaleString("ja-JP")}文字 (${diffStr})`);
-            logged++;
-        }
-    }
-
-    state.lastCommit = head;
-    await writeCountState(COUNT_STATE_FILE, state);
-    console.log(`完了: ${logged} 件を ${CHAR_COUNT_LOG} に記録しました。`);
-}
-
-async function readExistingPageCount(atbPath: string): Promise<number | undefined> {
-    const base = path.basename(atbPath, '.atb');
-    const pdfPath = path.join('dist', 'at-book', `${base}-honbun.pdf`);
-    return readPdfPageCount(pdfPath);
-}
-
-async function runCountChars(atbPath: string, opts: { fromCommit?: boolean } = {}): Promise<void> {
-    atbPath = toRepoRelativePath(atbPath);
-    let atbText: string;
-    if (opts.fromCommit) {
-        // post-commit フックなど: コミットされた版（HEAD）の内容を数える
-        try {
-            atbText = execSync(`git show HEAD:${atbPath}`, { encoding: 'utf-8' });
-        } catch {
-            atbText = await nodeFileReader.read(atbPath);
-        }
-    } else {
-        // 手動実行: 作業ツリーのローカル内容を数える
-        atbText = await nodeFileReader.read(atbPath);
-    }
-
-    let commitHash: string | undefined;
-    let commitMessage: string | undefined;
-    try {
-        commitHash    = execSync('git log -1 --format=%H', { encoding: 'utf-8' }).trim();
-        commitMessage = execSync('git log -1 --format=%s', { encoding: 'utf-8' }).trim();
-    } catch {}
-
-    const charCount = countChars(atbText);
-    const pageCount = await readExistingPageCount(atbPath);
-
-    const state = await readCountState(COUNT_STATE_FILE);
-    // 差分の基準: フック実行は親コミット(HEAD~1)と、手動実行は現在のコミット(HEAD)と比較する
-    const baseRef = opts.fromCommit ? "HEAD~1" : "HEAD";
-    const { charDiff, isNew } = commitHash
-        ? charDiffFromRef(baseRef, atbPath, charCount)
-        : { charDiff: undefined, isNew: false };
-    const prevPage = state.pages[atbPath];
-    const pageDiff = (prevPage !== undefined && pageCount !== undefined && pageCount > 0) ? pageCount - prevPage : undefined;
-
-    const charDiffStr = isNew ? " (新規)" : charDiff !== undefined ? ` (前回比 ${charDiff >= 0 ? "+" : ""}${charDiff.toLocaleString("ja-JP")}文字)` : "";
-    console.log(`文字数: ${charCount.toLocaleString('ja-JP')}文字${charDiffStr} (${atbPath})`);
-    if (pageCount !== undefined) console.log(`ページ数: ${pageCount}p`);
-    await appendCharCount(CHAR_COUNT_LOG, { atbPath, charCount, pageCount, commitHash, commitMessage, charDiff, pageDiff, isNew });
-
-    state.chars[atbPath] = charCount;
-    if (pageCount !== undefined && pageCount > 0) state.pages[atbPath] = pageCount;
-    await writeCountState(COUNT_STATE_FILE, state);
-}
-
-// 絶対パスをリポジトリルート相対パスに変換する。git show の ref:path 記法は絶対パスを受け付けないため。
-function toRepoRelativePath(p: string): string {
-    const repoRoot = git("rev-parse --show-toplevel")?.trim();
-    if (!repoRoot) return p;
-    const abs = path.isAbsolute(p) ? p : path.resolve(p);
-    return path.relative(repoRoot, abs);
-}
-
-async function runConvert(atbPath: string): Promise<void> {
-    atbPath = toRepoRelativePath(atbPath);
+// 原稿 1 つを、指定された出力先へ組版する。
+async function runConvert(work: BuildTarget): Promise<void> {
     const { pdfPath, epubPath, pageCount, charCount, formats, config } = await convertAtb(
         {
             converter:    atbConverter,
@@ -221,38 +74,18 @@ async function runConvert(atbPath: string): Promise<void> {
             pdfRunner:    vivliostyleRunner,
             configReader: nodeConfigReader,
         },
-        { atbPath }
+        { atbPath: work.atbPath, outDir: work.outDir }
     );
     if (pdfPath)  console.log(`生成完了: ${pdfPath}`);
     if (epubPath) console.log(`生成完了: ${epubPath}`);
     // web はプレーンテキストで HTML 経路を通らないため、ここで別途出力する。
-    if (formats.includes('web')) await runWeb(atbPath);
+    if (formats.includes('web')) await runWeb(work);
     console.log(`  総文字数 : ${charCount.toLocaleString('ja-JP')}文字`);
-
-    // 差分を算出してログに記録する。
-    //   文字数・ページ数ともに前回記録時の値（状態ファイル）との差分
-    const state = await readCountState(COUNT_STATE_FILE);
-    const commitHash = git("rev-parse HEAD")?.trim();
-    const commitMessage = commitHash ? git("log -1 --format=%s")?.trim() : undefined;
-    const prevChar = state.chars[atbPath];
-    const charDiff = prevChar !== undefined ? charCount - prevChar : undefined;
-    const prevPage = state.pages[atbPath];
-    const pageDiff = (prevPage !== undefined && pageCount > 0) ? pageCount - prevPage : undefined;
-
-    await appendCharCount(CHAR_COUNT_LOG, {
-        atbPath, charCount, pageCount,
-        charDiff, pageDiff, isNew: false, commitHash, commitMessage,
-    });
-
-    state.chars[atbPath] = charCount;
-    if (pageCount > 0) state.pages[atbPath] = pageCount;
-    if (commitHash) state.lastCommit = commitHash;
-    await writeCountState(COUNT_STATE_FILE, state);
 
     const { bodyPaperThicknessMm, coverPaperThicknessMm } = config;
     if (bodyPaperThicknessMm && coverPaperThicknessMm && pageCount > 0) {
-        const base      = path.basename(atbPath, '.atb');
-        const coverPath = path.join('dist', 'at-book', `${base}-hyoshi.svg`);
+        const base      = path.basename(work.atbPath, '.atb');
+        const coverPath = path.join(work.outDir, `${base}-hyoshi.svg`);
         const { svgPath } = await generateCoverTemplate(
             { fileWriter: nodeFileWriter },
             {
@@ -272,14 +105,21 @@ async function runConvert(atbPath: string): Promise<void> {
     }
 }
 
+// 原稿 1 つを指定して単体で走らせる経路（at-book web <原稿.atb>）用の解決。
+// ビルドと同じく、出力先は原稿の隣の設定ファイルで決める。
+async function resolveWork(atbPathArg: string): Promise<BuildTarget> {
+    const atbPath = path.resolve(atbPathArg);
+    const config  = await nodeConfigReader.read(atbPath);
+    return { atbPath, outDir: resolveOutDir(atbPath, config) };
+}
+
 // atb をウェブ投稿用テキストへ変換する。
 // 見出しで「作品フォルダ / 章フォルダ / 話ファイル(.txt)」に分割して出力する。
-async function runWeb(atbPath: string): Promise<void> {
-    atbPath = toRepoRelativePath(atbPath);
-    const outDir = path.join('dist', 'at-book', 'web');
+async function runWeb(work: BuildTarget): Promise<void> {
+    const outDir = path.join(work.outDir, 'web');
     const { bookDir, export: result, writtenPaths } = await convertAtbToWeb(
         { fileReader: nodeFileReader, fileWriter: nodeFileWriter },
-        { atbPath, outDir },
+        { atbPath: work.atbPath, outDir },
     );
     console.log(`ウェブ投稿用に変換しました: ${bookDir}`);
     console.log(`  作品フォルダ : ${result.folderName}`);
@@ -289,58 +129,163 @@ async function runWeb(atbPath: string): Promise<void> {
     }
 }
 
-async function main(): Promise<void> {
-    ensureHookInstalled();
+// カレントディレクトリに初期設定ファイルを配置する。
+// 原稿と同じフォルダに at-book.config.json を置く運用（README クイックスタート）なので、
+// 原稿フォルダに cd してから実行することを想定している。
+async function runInit(): Promise<void> {
+    const result = await initConfig(
+        { exists: nodeExists, listAtbFileNames: nodeListAtbFileNames, fileWriter: nodeFileWriter },
+        '.'
+    );
 
+    if (!result.ok) {
+        console.error(`エラー: ${result.configPath} は既に存在します。上書きは行いません。`);
+        process.exit(1);
+    }
+
+    console.log(`生成完了: ${result.configPath}`);
+    if (result.atbFileNames.length > 0) {
+        console.log(`  autoGenerate に既存の原稿を指定しました: ${result.atbFileNames.join(', ')}`);
+    } else {
+        console.log('  autoGenerate に組版したい原稿のファイル名を書いてください。');
+    }
+}
+
+// ビルド対象を決められなかった理由を、直し方まで含めて案内する。
+// 新規ユーザーが最初に踏むのはこの経路なので、生のスタックトレースは出さない。
+function printResolveFailure(failure: ResolveFailure): void {
+    const example = '  例: { "autoGenerate": ["your-novel.atb"] }';
+    switch (failure.kind) {
+        case 'targetMissing':
+            console.error(`エラー: 見つかりません: ${failure.target}`);
+            break;
+        case 'configInvalid':
+            console.error(`エラー: 設定ファイルを読めませんでした: ${failure.configPath}`);
+            console.error(`  JSON の書き方に誤りがあります（${failure.reason}）。`);
+            console.error('  末尾のカンマや閉じ括弧の抜けがないか確認してください。');
+            console.error(example);
+            break;
+        case 'noAutoGenerate':
+            if (failure.scope === 'tree') {
+                console.error(`エラー: ${failure.location} 配下に autoGenerate を持つ ${CONFIG_FILE_NAME} が見つかりませんでした。`);
+                console.error(`  原稿と同じフォルダに ${CONFIG_FILE_NAME} を置き、autoGenerate に原稿のファイル名を書いてください。`);
+            } else {
+                console.error(`エラー: ${failure.location} に autoGenerate がありません。`);
+            }
+            console.error(example);
+            break;
+        case 'atbMissing':
+            console.error(`エラー: 原稿が見つかりません: ${failure.relPath}`);
+            console.error(`  ${failure.configPath} の autoGenerate に、実在する原稿（.atb）のファイル名を書いてください。`);
+            break;
+    }
+}
+
+// ビルド対象を決めて、順に組版する。振り分けの規則は resolveBuildTargets を参照。
+async function runBuild(target?: string): Promise<void> {
+    const result = await resolveBuildTargets(
+        { statKind: nodeStatKind, findConfigDirs, configLoader: nodeConfigReader },
+        target
+    );
+
+    if (!result.ok) {
+        printResolveFailure(result.failure);
+        process.exit(1);
+    }
+
+    for (const work of result.targets) await runConvert(work);
+}
+
+// パッケージ自身のバージョンを読む。__dirname は dist/cli なので二つ上がパッケージルート。
+function readVersion(): string {
+    try {
+        const pkgPath = path.join(__dirname, '..', '..', 'package.json');
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string };
+        return pkg.version ?? 'unknown';
+    } catch {
+        return 'unknown';
+    }
+}
+
+// 使い方の一覧。引数なし＝カレント配下ビルドなので、usage の入口はここだけになる。
+function helpText(): string {
+    return [
+        '使い方: at-book [対象|コマンド]',
+        '',
+        '  at-book                        カレントディレクトリ配下の autoGenerate をビルド',
+        '  at-book <フォルダ>             配下の at-book.config.json を全て探してビルド',
+        '  at-book <at-book.config.json>  その設定ファイルの autoGenerate だけをビルド',
+        '  at-book <原稿.atb>             その原稿だけをビルド（隣の設定ファイルを使う）',
+        '',
+        '  at-book init                   カレントディレクトリに初期設定ファイルを生成',
+        '  at-book web <原稿.atb>         ウェブ投稿用テキストに変換',
+        '  at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]',
+        '                                 表紙テンプレート（SVG）を生成',
+        '',
+        '  --version, -v                  バージョンを表示',
+        '  --help, -h                     この使い方を表示',
+    ].join('\n');
+}
+
+// ＠本が受け付けるオプションはこれだけ。他はすべて打ち間違いとして扱う。
+const KNOWN_FLAGS = new Set(['--version', '-v', '--help', '-h']);
+
+// 知らないオプションを弾く。
+// ビルド対象として扱ってしまうと「見つかりません: --varsion」というパスの話になり、
+// 打ち間違いだと気づきにくい。オプションとして拒否し、使い方を添える。
+function rejectUnknownOption(arg: string): never {
+    console.error(`エラー: 知らないオプションです: ${arg}`);
+    console.error('');
+    console.error(helpText());
+    process.exit(1);
+}
+
+async function main(): Promise<void> {
     const [subcommand, ...rest] = process.argv.slice(2);
 
-    if (!subcommand) {
-        const configDirs = await findConfigDirs('.');
-        let hasAnyAutoGenerate = false;
-        for (const configDir of configDirs) {
-            const config = await nodeConfigReader.read(path.join(configDir, '_'));
-            if (!config.autoGenerate || config.autoGenerate.length === 0) continue;
-            hasAnyAutoGenerate = true;
-            for (const relPath of config.autoGenerate) {
-                await runConvert(path.join(configDir, relPath));
-            }
-        }
-        if (!hasAnyAutoGenerate) {
-            console.error("使い方: at-book <file.atb>");
-            console.error("        at-book web <file.atb>");
-            console.error("        at-book cover <ページ数> [本文紙厚mm] [表紙紙厚mm] [出力ファイル]");
-            process.exit(1);
-        }
+    if (subcommand?.startsWith('-') && !KNOWN_FLAGS.has(subcommand)) rejectUnknownOption(subcommand);
+
+    if (subcommand === "--version" || subcommand === "-v") {
+        console.log(readVersion());
         return;
     }
 
-    if (subcommand === "cover") {
+    if (subcommand === "--help" || subcommand === "-h") {
+        console.log(helpText());
+        return;
+    }
+
+    // サブコマンドはどれもオプションを取らないので、残りに現れた `-` 始まりは打ち間違い。
+    const strayOption = rest.find(a => a.startsWith('-'));
+    if (strayOption) rejectUnknownOption(strayOption);
+
+    if (subcommand === "init") {
+        await runInit();
+    } else if (subcommand === "cover") {
         await runCover(rest);
     } else if (subcommand === "web") {
-        const fileArg = rest.find(a => !a.startsWith("--"));
+        const fileArg = rest[0];
         if (!fileArg) {
-            console.error("使い方: at-book web <file.atb>");
+            console.error("使い方: at-book web <原稿.atb>");
             process.exit(1);
         }
-        await runWeb(fileArg);
-    } else if (subcommand === "count") {
-        // --committed: コミット済み(HEAD)の内容を数える（post-commit フックが使用）。
-        // フラグ無し（手動実行）は作業ツリーのローカル内容を数える。
-        const fromCommit = rest.includes("--committed");
-        const fileArg = rest.find(a => !a.startsWith("--"));
-        if (fileArg) {
-            // ファイル指定あり: 単体ファイルの現時点の文字数を記録
-            await runCountChars(fileArg, { fromCommit });
-        } else {
-            // 引数なし: コミット履歴をたどって記録（初回は全件、以降は新着のみ）
-            await runCountHistory();
-        }
+        await runWeb(await resolveWork(fileArg));
     } else {
-        await runConvert(subcommand);
+        // 残りはすべてビルド対象の指定として扱う（未指定ならビルド対象はカレントディレクトリ）。
+        await runBuild(subcommand);
     }
 }
 
 main().catch((err: unknown) => {
-    console.error(err);
+    // 利用者向け CLI なので、想定内の失敗はスタックトレースではなくメッセージだけを出す。
+    // Error 以外（想定外の投げ方）はそのまま出して手掛かりを残す。
+    if (err instanceof Error) {
+        console.error(`エラー: ${err.message}`);
+        // 原因の連鎖とスタックは既定では伏せる（利用者には読む負担でしかない）。
+        // 不具合を報告するときなど、詳細が要る場合だけ AT_BOOK_DEBUG=1 を付ける。
+        if (process.env.AT_BOOK_DEBUG) console.error(err);
+    } else {
+        console.error(err);
+    }
     process.exit(1);
 });

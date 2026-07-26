@@ -37,7 +37,12 @@ interface Deps {
     configReader: ConfigReader;
 }
 
-export interface ConvertInput  { atbPath: string }
+export interface ConvertInput {
+    atbPath: string;
+    // 成果物の出力先ディレクトリ。呼び出し側（CLI）が作品ごとに解決して渡す。
+    // ここで組み立てないのは、出力先をカレントディレクトリに依存させないため。
+    outDir:  string;
+}
 export interface ConvertOutput {
     // 生成したフォーマットのぶんだけパスが入る（要求されなければ undefined）。
     pdfPath?:   string;
@@ -58,7 +63,7 @@ export async function convertAtb(
         deps.configReader.read(input.atbPath),
     ]);
     const base    = path.basename(input.atbPath, '.atb');
-    const outDir  = path.join('dist', 'at-book');
+    const outDir  = input.outDir;
     const formats = config.formats && config.formats.length > 0 ? config.formats : ['pdf' as const];
 
     // HTML/CSS は出力先ごとに組む。圏点の拡大などリーダー対応の都合で pdf と epub では

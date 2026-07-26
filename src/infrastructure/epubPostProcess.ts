@@ -71,7 +71,7 @@ export async function injectPrimaryWritingMode(
         archive.finalize();
     });
 
-    // 元 EPUB を差し替える。
-    await rm(absPath, { force: true });
+    // 元 EPUB を差し替える。rename は既存ファイルを原子的に置き換えるので、
+    // 事前に消さない（消してから rename すると、間で落ちたとき EPUB が消える）。
     await rename(tmpPath, absPath);
 }

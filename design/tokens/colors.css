@@ -1,0 +1,124 @@
+/* colors.css — 墨・紙・朱
+ *
+ * 三系統しか持たない。
+ *   墨 (sumi)   … 文字と罫。無彩色よりわずかに暖色へ振り、紙に馴染ませる。
+ *   紙 (washi)  … 面。純白を使わない。生成りの温度を残す。
+ *   朱 (shu)    … 差し色。校正の朱入れ・落款の印。UI では「今ここ」と
+ *                  「取り返しがつかない操作」にだけ許す。面で塗らない。
+ *
+ * 朱の使用量が増えたらデザインが壊れているサイン。画面の 2% を超えないこと。
+ */
+
+:root {
+    /* ── 墨 ────────────────────────────── */
+    --sumi-900: #0f0f0e;   /* 大見出し */
+    --sumi-800: #1c1b1a;   /* 見出し */
+    --sumi-700: #2e2c2a;   /* 本文 */
+    --sumi-600: #4a4744;   /* 副次本文 */
+    --sumi-500: #6b6763;   /* 補助・キャプション */
+    --sumi-400: #918c86;   /* プレースホルダ・無効 */
+    --sumi-300: #b8b3ac;   /* 強い罫 */
+    --sumi-200: #d6d1c9;   /* 罫 */
+    --sumi-100: #e7e3db;   /* 薄罫・区切り */
+
+    /* ── 紙 ────────────────────────────── */
+    --washi-50:  #fbfaf7;  /* 浮いた面（カード・入力） */
+    --washi-100: #f6f4ef;  /* ページ地 */
+    --washi-200: #efece5;  /* 沈んだ面（ドロップ領域・ログ） */
+    --washi-300: #e5e1d8;  /* さらに沈んだ面 */
+
+    /* ── 朱 ────────────────────────────── */
+    --shu-600: #a8352a;    /* 紙上のテキスト（コントラスト確保用） */
+    --shu-500: #c0392b;    /* 標準の朱 */
+    --shu-400: #d4544a;    /* ホバー時の明るい朱 */
+    --shu-100: #f7e4e1;    /* 淡い面（警告帯の地） */
+
+    /* ── 意味づけ ──────────────────────── */
+    --color-bg:             var(--washi-100);
+    --color-surface:        var(--washi-50);
+    --color-surface-sunken: var(--washi-200);
+    --color-surface-deep:   var(--washi-300);
+
+    --color-text:        var(--sumi-700);
+    --color-text-strong: var(--sumi-900);
+    --color-text-muted:  var(--sumi-500);
+    --color-text-faint:  var(--sumi-400);
+    --color-text-invert: var(--washi-50);
+
+    --color-rule:        var(--sumi-200);
+    --color-rule-soft:   var(--sumi-100);
+    --color-rule-strong: var(--sumi-300);
+
+    --color-accent:        var(--shu-500);
+    --color-accent-text:   var(--shu-600);
+    --color-accent-hover:  var(--shu-400);
+    --color-accent-weak:   var(--shu-100);
+
+    /* 状態。無彩色で表し、失敗だけ朱を借りる */
+    --color-running: var(--sumi-600);
+    --color-done:    var(--sumi-800);
+    --color-failed:  var(--shu-500);
+
+    --color-focus-ring: rgba(192, 57, 43, .22);
+}
+
+/* ── 夜（墨ベース） ──────────────────────
+ * 紙と墨を反転させる。朱はそのままでは沈むので明度を上げる。
+ */
+:root[data-theme='dark'] {
+    --color-bg:             #171614;
+    --color-surface:        #201e1b;
+    --color-surface-sunken: #131211;
+    --color-surface-deep:   #0e0d0c;
+
+    --color-text:        #ddd8d0;
+    --color-text-strong: #f4f1ea;
+    --color-text-muted:  #9b958c;
+    --color-text-faint:  #6f6a63;
+    --color-text-invert: #171614;
+
+    --color-rule:        #37332e;
+    --color-rule-soft:   #28241f;
+    --color-rule-strong: #4c4740;
+
+    --color-accent:       #e2685a;
+    --color-accent-text:  #ef8478;
+    --color-accent-hover: #ef8478;
+    --color-accent-weak:  #3a2320;
+
+    --color-running: #b4aea5;
+    --color-done:    #f4f1ea;
+    --color-failed:  #e2685a;
+
+    --color-focus-ring: rgba(226, 104, 90, .28);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        --color-bg:             #171614;
+        --color-surface:        #201e1b;
+        --color-surface-sunken: #131211;
+        --color-surface-deep:   #0e0d0c;
+
+        --color-text:        #ddd8d0;
+        --color-text-strong: #f4f1ea;
+        --color-text-muted:  #9b958c;
+        --color-text-faint:  #6f6a63;
+        --color-text-invert: #171614;
+
+        --color-rule:        #37332e;
+        --color-rule-soft:   #28241f;
+        --color-rule-strong: #4c4740;
+
+        --color-accent:       #e2685a;
+        --color-accent-text:  #ef8478;
+        --color-accent-hover: #ef8478;
+        --color-accent-weak:  #3a2320;
+
+        --color-running: #b4aea5;
+        --color-done:    #f4f1ea;
+        --color-failed:  #e2685a;
+
+        --color-focus-ring: rgba(226, 104, 90, .28);
+    }
+}

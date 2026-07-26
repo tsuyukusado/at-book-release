@@ -1,0 +1,45 @@
+<!-- @dsCard group="Components" name="FormatToggle" subtitle="formats: pdf / epub / web の複数選択。クリックで切り替わる" viewport="620x300" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">出力フォーマット</p>
+    <div class="atb-fmt">
+      <input class="atb-fmt__input" type="checkbox" id="f-pdf" checked>
+      <label class="atb-fmt__item" for="f-pdf">
+        <span class="atb-fmt__name">PDF</span>
+        <span class="atb-fmt__desc">印刷用。ノンブル・綴じ代つき</span>
+      </label>
+
+      <input class="atb-fmt__input" type="checkbox" id="f-epub">
+      <label class="atb-fmt__item" for="f-epub">
+        <span class="atb-fmt__name">EPUB</span>
+        <span class="atb-fmt__desc">電子書籍。リフロー</span>
+      </label>
+
+      <input class="atb-fmt__input" type="checkbox" id="f-web">
+      <label class="atb-fmt__item" for="f-web">
+        <span class="atb-fmt__name">WEB</span>
+        <span class="atb-fmt__desc">投稿サイト向けテキスト</span>
+      </label>
+    </div>
+    <p class="spec__note">未指定なら PDF のみ（＠本の従来動作）。最低ひとつは選ばれている状態を保つ。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">選択なし — エラー</p>
+    <div class="atb-callout atb-callout--error">
+      <div><span class="atb-callout__title">出力形式が選ばれていない</span>PDF・EPUB・WEB のうち、少なくともひとつを選ぶ。</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

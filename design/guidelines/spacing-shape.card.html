@@ -1,0 +1,61 @@
+<!-- @dsCard group="Spacing" name="余白・角・影" subtitle="4px 基準／角はほぼ立てる／影は紙一枚ぶん" viewport="620x400" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../card-frame.css">
+<style>
+  .bars { display: flex; align-items: flex-end; gap: 10px; }
+  .bar { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .bar__block { background: var(--sumi-700); border-radius: 1px; width: 100%; }
+  .bar__key { font-family: var(--font-mono); font-size: 9.5px; color: var(--color-text-faint); }
+  .radii { display: flex; gap: 12px; }
+  .radius { width: 62px; height: 48px; background: var(--color-surface); border: 1px solid var(--color-rule-strong); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 9.5px; color: var(--color-text-muted); }
+  .shadows { display: flex; gap: 16px; }
+  .shadow { flex: 1; height: 62px; background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
+</style>
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">余白 — 4px 基準</p>
+    <div class="bars">
+      <div class="bar" style="width:22px"><div class="bar__block" style="height:4px"></div><span class="bar__key">1<br>4</span></div>
+      <div class="bar" style="width:22px"><div class="bar__block" style="height:8px"></div><span class="bar__key">2<br>8</span></div>
+      <div class="bar" style="width:22px"><div class="bar__block" style="height:12px"></div><span class="bar__key">3<br>12</span></div>
+      <div class="bar" style="width:22px"><div class="bar__block" style="height:16px"></div><span class="bar__key">4<br>16</span></div>
+      <div class="bar" style="width:22px"><div class="bar__block" style="height:24px"></div><span class="bar__key">5<br>24</span></div>
+      <div class="bar" style="width:22px"><div class="bar__block" style="height:32px"></div><span class="bar__key">6<br>32</span></div>
+      <div class="bar" style="width:22px"><div class="bar__block" style="height:48px"></div><span class="bar__key">7<br>48</span></div>
+      <div class="bar" style="width:22px"><div class="bar__block" style="height:64px"></div><span class="bar__key">8<br>64</span></div>
+      <div class="bar" style="width:22px"><div class="bar__block" style="height:80px"></div><span class="bar__key">9<br>96</span></div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">角 — 立てる</p>
+    <div class="radii">
+      <div class="radius" style="border-radius:var(--r-xs)">xs 2</div>
+      <div class="radius" style="border-radius:var(--r-sm)">sm 3</div>
+      <div class="radius" style="border-radius:var(--r-md)">md 4</div>
+      <div class="radius" style="border-radius:var(--r-lg)">lg 6</div>
+      <div class="radius" style="border-radius:var(--r-pill)">pill</div>
+    </div>
+    <p class="spec__note">pill はタグ・状態ドットのみ。ボタンに使わない。本と活字は角が立っている。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">影 — 墨で落とす</p>
+    <div class="shadows">
+      <div class="shadow" style="box-shadow:var(--shadow-raise)">raise</div>
+      <div class="shadow" style="box-shadow:var(--shadow-page)">page</div>
+      <div class="shadow" style="box-shadow:var(--shadow-inset); background:var(--color-surface-sunken)">inset</div>
+      <div class="shadow" style="box-shadow:var(--shadow-focus); border-color:var(--color-accent)">focus</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

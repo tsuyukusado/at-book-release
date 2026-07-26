@@ -1,0 +1,45 @@
+<!-- @dsCard group="Input" name="FileList — 受理した原稿" subtitle="autoGenerate に渡る順序付きの一覧。不正行を含む" viewport="640x330" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">一覧</p>
+    <ul class="atb-files">
+      <li class="atb-file">
+        <span class="atb-file__ext">atb</span>
+        <span class="atb-file__name">01-prologue.atb</span>
+        <span class="atb-file__meta">4.2 KB ・ 2,140 字</span>
+        <button class="atb-file__remove" aria-label="外す">×</button>
+      </li>
+      <li class="atb-file">
+        <span class="atb-file__ext">atb</span>
+        <span class="atb-file__name">02-chapter-one.atb</span>
+        <span class="atb-file__meta">31.8 KB ・ 16,502 字</span>
+        <button class="atb-file__remove" aria-label="外す">×</button>
+      </li>
+      <li class="atb-file">
+        <span class="atb-file__ext">txt</span>
+        <span class="atb-file__name">03-afterword.txt</span>
+        <span class="atb-file__meta">1.1 KB ・ 580 字</span>
+        <button class="atb-file__remove" aria-label="外す">×</button>
+      </li>
+      <li class="atb-file atb-file--invalid">
+        <span class="atb-file__ext">docx</span>
+        <span class="atb-file__name">no-title.docx — 読めない形式</span>
+        <span class="atb-file__meta">—</span>
+        <button class="atb-file__remove" aria-label="外す">×</button>
+      </li>
+    </ul>
+    <p class="spec__note">並び順がそのまま <span class="atb-mono">autoGenerate</span> の順序になる。総計 19,222 字。</p>
+  </div>
+
+</div>
+</body>
+</html>

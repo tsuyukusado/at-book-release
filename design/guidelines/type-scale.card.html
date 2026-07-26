@@ -1,0 +1,60 @@
+<!-- @dsCard group="Type" name="級数と書体" subtitle="明朝＝見出しと原稿／ゴシック＝操作／等幅＝パスとログ" viewport="620x460" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../card-frame.css">
+<style>
+  .line { display: flex; align-items: baseline; gap: 16px; padding: 7px 0; border-bottom: 1px solid var(--color-rule-soft); }
+  .line:last-child { border-bottom: 0; }
+  .line__key { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-faint); width: 84px; flex: none; }
+  .fams { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .fam { border: 1px solid var(--color-rule); border-radius: var(--r-sm); padding: 12px; background: var(--color-surface); }
+  .fam__role { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--color-text-faint); margin-bottom: 8px; }
+  .fam__sample { color: var(--color-text-strong); }
+  .fam__meta { font-family: var(--font-mono); font-size: 9.5px; color: var(--color-text-muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">書体の三分担</p>
+    <div class="fams">
+      <div class="fam">
+        <div class="fam__role">Display / 原稿</div>
+        <div class="fam__sample" style="font-family:var(--font-display); font-size:22px">第一章　序</div>
+        <div class="fam__meta">Shippori Mincho</div>
+      </div>
+      <div class="fam">
+        <div class="fam__role">UI / 操作</div>
+        <div class="fam__sample" style="font-family:var(--font-body); font-size:18px">組版する</div>
+        <div class="fam__meta">Zen Kaku Gothic New</div>
+      </div>
+      <div class="fam">
+        <div class="fam__role">Mono / パス</div>
+        <div class="fam__sample" style="font-family:var(--font-mono); font-size:15px">at-book-out/</div>
+        <div class="fam__meta">JetBrains Mono</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">級数</p>
+    <div>
+      <div class="line"><span class="line__key">--fs-32</span><span style="font-family:var(--font-display); font-size:var(--fs-32); font-weight:700; color:var(--color-text-strong)">大見出し</span></div>
+      <div class="line"><span class="line__key">--fs-24</span><span style="font-family:var(--font-display); font-size:var(--fs-24); font-weight:700; color:var(--color-text-strong)">見出し</span></div>
+      <div class="line"><span class="line__key">--fs-19</span><span style="font-family:var(--font-display); font-size:var(--fs-19); color:var(--color-text-strong)">小見出し</span></div>
+      <div class="line"><span class="line__key">--fs-16</span><span style="font-size:var(--fs-16)">本文。原稿の内容そのもの。</span></div>
+      <div class="line"><span class="line__key">--fs-14</span><span style="font-size:var(--fs-14)">UI 標準。ボタン・入力・ラベル。</span></div>
+      <div class="line"><span class="line__key">--fs-13</span><span style="font-size:var(--fs-13); color:var(--color-text-muted)">補助テキスト・ヒント。</span></div>
+      <div class="line"><span class="line__key">--fs-12</span><span style="font-family:var(--font-mono); font-size:var(--fs-12); color:var(--color-text-muted)">キャプション・ログ行</span></div>
+      <div class="line"><span class="line__key">--fs-11</span><span class="atb-eyebrow" style="margin:0">EYEBROW LABEL</span></div>
+    </div>
+  </div>
+
+  <p class="spec__note">強調は級数を上げるのではなく、明朝に替えるか字間を空けて作る。太字は本文中に持ち込まない。</p>
+</div>
+</body>
+</html>

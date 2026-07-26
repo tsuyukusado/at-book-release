@@ -1,0 +1,40 @@
+<!-- @dsCard group="Output" name="BuildLog" subtitle="組版の進行。等幅・時刻つき。失敗行だけ朱" viewport="640x340" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <div class="atb-row" style="justify-content:space-between">
+      <p class="spec__label" style="margin:0">ビルドログ</p>
+      <span class="atb-status atb-status--running">組版中</span>
+    </div>
+    <div class="atb-log">
+      <div class="atb-log__line"><span class="atb-log__time">10:24:02</span><span>設定を読み込み  doc/at-book.config.json</span></div>
+      <div class="atb-log__line"><span class="atb-log__time">10:24:02</span><span>用紙 a6 ・ 縦書き ・ 出力 pdf, epub</span></div>
+      <div class="atb-log__line"><span class="atb-log__time">10:24:02</span><span>原稿 3 件 ・ 19,222 字</span></div>
+      <div class="atb-log__line atb-log__line--ok"><span class="atb-log__time">10:24:03</span><span>＠記法を解析  見出し 12 ・ ルビ 148 ・ 圏点 9</span></div>
+      <div class="atb-log__line"><span class="atb-log__time">10:24:04</span><span>目次を生成</span></div>
+      <div class="atb-log__line"><span class="atb-log__time">10:24:05</span><span>Vivliostyle で組版…</span></div>
+      <div class="atb-log__line atb-log__line--warn"><span class="atb-log__time">10:24:11</span><span>警告: 03-afterword.txt に ＠目次 が二度ある。後方を無視した</span></div>
+      <div class="atb-log__line atb-log__line--ok"><span class="atb-log__time">10:24:18</span><span>PDF を書き出し  at-book-out/novel.pdf  (214 頁)</span></div>
+      <div class="atb-log__line"><span class="atb-log__time">10:24:19</span><span>EPUB を書き出し…</span></div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">失敗時</p>
+    <div class="atb-log" style="max-height:none">
+      <div class="atb-log__line"><span class="atb-log__time">10:31:40</span><span>Vivliostyle で組版…</span></div>
+      <div class="atb-log__line atb-log__line--err"><span class="atb-log__time">10:31:52</span><span>エラー: Chromium を起動できない。AT_BOOK_CHROME を確認する</span></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

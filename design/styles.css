@@ -1,0 +1,12 @@
+/* styles.css — ＠本 組版 Design System の入口
+ *
+ * 実装側はこれ一枚を読めばよい。
+ *   @import url('.../styles.css');
+ */
+
+@import url('./tokens/fonts.css');
+@import url('./tokens/colors.css');
+@import url('./tokens/typography.css');
+@import url('./tokens/spacing.css');
+@import url('./tokens/effects.css');
+@import url('./components/components.css');

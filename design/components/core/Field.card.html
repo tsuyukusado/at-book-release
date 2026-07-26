@@ -1,0 +1,60 @@
+<!-- @dsCard group="Components" name="Field" subtitle="outDir・背幅mm などの入力。ラベル / ヒント / エラー / 単位" viewport="620x420" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+<style>.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }</style>
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">パス入力 — outDir</p>
+    <div class="atb-field">
+      <label class="atb-label" for="out">出力先<span class="atb-label__opt">任意</span></label>
+      <input class="atb-input atb-input--mono" id="out" value="at-book-out" placeholder="at-book-out">
+      <span class="atb-hint">原稿のあるフォルダからの相対パス。未指定なら at-book-out/ に出る。</span>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">数値＋単位 — 表紙テンプレートの背幅計算</p>
+    <div class="grid2">
+      <div class="atb-field">
+        <label class="atb-label" for="bt">本文用紙の厚さ<span class="atb-label__opt">任意</span></label>
+        <div class="atb-unit">
+          <input class="atb-input atb-input--num" id="bt" value="0.09">
+          <span class="atb-unit__suffix">mm / 枚</span>
+        </div>
+      </div>
+      <div class="atb-field">
+        <label class="atb-label" for="ct">表紙用紙の厚さ<span class="atb-label__opt">任意</span></label>
+        <div class="atb-unit">
+          <input class="atb-input atb-input--num" id="ct" value="0.23">
+          <span class="atb-unit__suffix">mm / 枚</span>
+        </div>
+      </div>
+    </div>
+    <p class="spec__note">ページ数と掛け合わせて背幅を出し、塗り足しガイド入りの表紙テンプレートを生成する。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">エラー</p>
+    <div class="atb-field">
+      <label class="atb-label" for="bad">出力先</label>
+      <input class="atb-input atb-input--mono" id="bad" value="../../../etc" style="border-color:var(--color-accent)">
+      <span class="atb-error">原稿フォルダの外は指定できない。</span>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">フォーカス</p>
+    <input class="atb-input atb-input--mono" value="doc/" style="border-color:var(--color-accent); box-shadow:var(--shadow-focus)">
+    <p class="spec__note">フォーカス輪だけは朱。今どこにいるかを示す。</p>
+  </div>
+
+</div>
+</body>
+</html>

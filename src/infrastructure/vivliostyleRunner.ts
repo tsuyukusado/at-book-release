@@ -1,7 +1,6 @@
 import { spawn } from "child_process";
 import { writeFile, mkdir, readFile, copyFile, rm } from "fs/promises";
 import { existsSync } from "fs";
-import * as os from "os";
 import * as path from "path";
 import { PDFDocument } from "pdf-lib";
 import type { HtmlToPdfRunner } from "../usecase";
@@ -19,16 +18,12 @@ function spawnAsync(cmd: string, args: string[], cwd: string, env: NodeJS.Proces
     });
 }
 
-// 手動配置した Chrome for Testing の実行ファイル。
-const CHROME_FOR_TESTING = path.join(os.homedir(), '.local/chrome-for-testing/chrome-linux64/chrome');
-// その Chrome が依存する共有ライブラリ一式（Playwright 非対応環境向けに手動配置）。
-const CHROME_LIB_DIR = path.join(os.homedir(), '.local/chrome-libs/usr/lib/x86_64-linux-gnu');
-// 同梱フォント（@font-face 用 兼 fontconfig フォールバック用）の置き場。
+// 同梱フォント（@font-face 用）の置き場。
 const BUNDLED_FONTS_DIR = path.resolve(__dirname, '../../fonts');
 
 // 組版に使うブラウザを解決する。
 //   1. AT_BOOK_CHROME（明示指定）が最優先。
-//   2. 手動配置の Chrome for Testing / システムの Chrome・Chromium を自動検出。
+//   2. システムに入っている Chrome / Chromium を自動検出。
 //   3. 見つからなければ undefined を返し、Vivliostyle 同梱 Chromium に委ねる。
 // これにより、環境変数を毎回 export しなくても `at-book` 一発で生成できる。
 function resolveBrowser(): string | undefined {
@@ -36,7 +31,6 @@ function resolveBrowser(): string | undefined {
     if (fromEnv && existsSync(fromEnv)) return fromEnv;
 
     const candidates = [
-        CHROME_FOR_TESTING,
         '/usr/bin/google-chrome',
         '/usr/bin/google-chrome-stable',
         '/opt/google/chrome/chrome',
@@ -45,47 +39,6 @@ function resolveBrowser(): string | undefined {
         '/snap/bin/chromium',
     ];
     return candidates.find(p => existsSync(p));
-}
-
-// 手動配置の Chrome for Testing を使う場合、この環境はフォントも fontconfig 設定も
-// 持たない。Chrome/Skia はフォント・フォールバック時に fontconfig を必ず引き、
-// 発見可能なフォントが 1 つも無いと SkFontMgr_FontConfigInterface の未実装パスに入って
-// SIGABRT で落ちる（「page ... has been closed」の正体）。同梱フォントを指す最小の
-// fontconfig 設定を生成し、FONTCONFIG_FILE で読ませてクラッシュを防ぐ。
-// フォントが揃った通常環境（システム Chrome 等）には触れない。
-async function writeFontconfig(destDir: string): Promise<string> {
-    const fcDir    = path.join(destDir, 'fontconfig');
-    const cacheDir = path.join(fcDir, 'cache');
-    const confPath = path.join(fcDir, 'fonts.conf');
-    await mkdir(cacheDir, { recursive: true });
-    const conf = `<?xml version="1.0"?>
-<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
-<fontconfig>
-  <dir>${BUNDLED_FONTS_DIR}</dir>
-  <dir>/usr/share/fonts</dir>
-  <dir>/usr/local/share/fonts</dir>
-  <dir prefix="xdg">fonts</dir>
-  <dir>~/.fonts</dir>
-  <cachedir>${cacheDir}</cachedir>
-  <cachedir prefix="xdg">fontconfig</cachedir>
-</fontconfig>
-`;
-    await writeFile(confPath, conf, 'utf-8');
-    return confPath;
-}
-
-// 手動配置の Chrome for Testing を使う場合のみ、依存ライブラリの場所を
-// LD_LIBRARY_PATH に前置きし、生成した fontconfig 設定を FONTCONFIG_FILE で渡した
-// 環境を返す（それ以外は現在の環境をそのまま使う）。
-function browserEnv(browser: string | undefined, fontconfigFile: string | undefined): NodeJS.ProcessEnv {
-    const env = { ...process.env };
-    if (browser === CHROME_FOR_TESTING && existsSync(CHROME_LIB_DIR)) {
-        env.LD_LIBRARY_PATH = env.LD_LIBRARY_PATH
-            ? `${CHROME_LIB_DIR}:${env.LD_LIBRARY_PATH}`
-            : CHROME_LIB_DIR;
-        if (fontconfigFile) env.FONTCONFIG_FILE = fontconfigFile;
-    }
-    return env;
 }
 
 // 生成済み PDF のページ数を読む（存在しない・壊れている場合は undefined）。
@@ -119,12 +72,14 @@ function resolveVivliostyleBin(): string {
     return 'vivliostyle';
 }
 
-// ビルド用ディレクトリを用意する（フォント同梱・fontconfig 生成）。pdf/epub 共通。
-// 返り値は生成した fontconfig 設定のパス（Chrome for Testing 使用時のみ使う）。
-async function prepareBuildDir(absDir: string): Promise<string> {
+// ビルド用ディレクトリを用意する。
+//
+// bundleFonts は @font-face 用の TTF 実体をこのディレクトリへ置くかどうか。
+// PDF は同梱フォントを埋め込むので true。EPUB はビルドディレクトリの中身が
+// そのまま EPUB に取り込まれる（＝置けば 17MB の TTF が同梱される）ため false。
+async function prepareBuildDir(absDir: string, bundleFonts: boolean): Promise<void> {
     await mkdir(absDir, { recursive: true });
-    await copyFonts(absDir);
-    return writeFontconfig(absDir);
+    if (bundleFonts) await copyFonts(absDir);
 }
 
 // vivliostyle CLI を起動して成果物を 1 つ書き出す共通処理。
@@ -135,7 +90,6 @@ async function runVivliostyle(
     inputArgs: string[],
     absOutPath: string,
     absDir: string,
-    fontconfigFile: string,
     format: 'pdf' | 'epub',
 ): Promise<void> {
     const bin = resolveVivliostyleBin();
@@ -154,21 +108,50 @@ async function runVivliostyle(
         ...(browser ? ['--executable-browser', browser] : []),
     ];
 
-    await spawnAsync(cmd, args, absDir, browserEnv(browser, fontconfigFile));
+    try {
+        await spawnAsync(cmd, args, absDir, { ...process.env });
+    } catch (err) {
+        // Vivliostyle 同梱 Chromium のダウンロードに失敗する環境がある（Playwright が
+        // 対応しない OS 等）。その場合でも手元のブラウザを指せば組めるので、
+        // AT_BOOK_CHROME 未指定の失敗では必ずその道筋を案内する。
+        const reason = err instanceof Error ? err.message : String(err);
+        const lines = [`組版に失敗しました（${reason}）。`];
+        if (!process.env.AT_BOOK_CHROME) {
+            lines.push('  ブラウザの取得や起動に失敗した場合は、手元の Chrome / Chromium の実行ファイルを');
+            lines.push('  環境変数 AT_BOOK_CHROME に指定して再実行してください。');
+            lines.push('  例: AT_BOOK_CHROME=/usr/bin/google-chrome npx at-book');
+        }
+        // 案内を足して投げ直すが、元の例外は cause に残す（スタックが消えると調査できない）。
+        throw new Error(lines.join('\n'), { cause: err });
+    }
 }
 
 // 紙面固定の PDF を組む。単一 HTML をそのまま Vivliostyle に渡す。
+//
+// EPUB と同じく専用の隔離ディレクトリで組む。中間 HTML と @font-face 用の TTF 実体を
+// 出力先に直接置くと、後始末（fonts/ の削除）が利用者の同名ファイルを巻き込むため。
+// 隔離ディレクトリなら、消してよいものだけが中に入っている。
 async function runPdfBuild(htmlContent: string, outputPath: string): Promise<void> {
-    const dir      = path.dirname(outputPath);
-    const base     = path.basename(outputPath, '.pdf');
-    const absDir      = path.resolve(dir);
-    const absHtmlPath = path.resolve(path.join(dir, `${base}.html`));
-    const absOutPath  = path.resolve(outputPath);
+    const base       = path.basename(outputPath, '.pdf');
+    const absOutPath = path.resolve(outputPath);
+    const buildDir   = path.join(path.resolve(path.dirname(outputPath)), `.pdf-build-${base}`);
 
-    const fontconfigFile = await prepareBuildDir(absDir);
+    await rm(buildDir, { recursive: true, force: true });
+    await prepareBuildDir(buildDir, true);
+
+    const absHtmlPath = path.join(buildDir, `${base}.html`);
     await writeFile(absHtmlPath, htmlContent, 'utf-8');
 
-    await runVivliostyle([absHtmlPath], absOutPath, absDir, fontconfigFile, 'pdf');
+    try {
+        await runVivliostyle([absHtmlPath], absOutPath, buildDir, 'pdf');
+    } catch (err) {
+        // 失敗時だけは隔離ディレクトリを残す。中間 HTML が原因調査の手掛かりになる。
+        const reason = err instanceof Error ? err.message : String(err);
+        throw new Error(`${reason}\n  組版に使った中間ファイルを残しました: ${buildDir}`, { cause: err });
+    }
+    // 成功したら片付ける。PDF にはフォントのサブセットが埋め込まれ済みで、
+    // TTF 実体（17MB）も中間 HTML も以降は不要。
+    await rm(buildDir, { recursive: true, force: true });
 }
 
 // リフロー型 EPUB を組む。改ページ境界で分割済みの各セクションを個別の HTML ファイルに
@@ -186,7 +169,7 @@ async function runEpubBuild(sections: EpubSection[], outputPath: string, reading
     const buildDir   = path.join(path.resolve(path.dirname(outputPath)), `.epub-build-${base}`);
 
     await rm(buildDir, { recursive: true, force: true });
-    const fontconfigFile = await prepareBuildDir(buildDir);
+    await prepareBuildDir(buildDir, false);
 
     // 1 セクション = 1 HTML ファイル = 1 spine。ファイル名はレンダラが決める（目次リンクが
     // その名前を指すため、書き出す名前と entry を必ずレンダラ由来の fileName に合わせる）。
@@ -201,7 +184,7 @@ async function runEpubBuild(sections: EpubSection[], outputPath: string, reading
 
     try {
         // 設定ファイルは `-c` で明示指定する（隔離ディレクトリを entryContext にする）。
-        await runVivliostyle(['-c', configPath], absOutPath, buildDir, fontconfigFile, 'epub');
+        await runVivliostyle(['-c', configPath], absOutPath, buildDir, 'epub');
     } finally {
         await rm(buildDir, { recursive: true, force: true });
     }

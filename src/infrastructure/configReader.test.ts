@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtemp, writeFile, rm } from 'fs/promises';
+import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import { nodeConfigReader } from './configReader';
@@ -43,5 +43,94 @@ describe('configReader の formats パース', () => {
     it('配列でない・有効値ゼロなら undefined', async () => {
         expect((await readConfig({ formats: 'epub' })).formats).toBeUndefined();
         expect((await readConfig({ formats: ['mobi'] })).formats).toBeUndefined();
+    });
+});
+
+describe('configReader の用紙・組み方向・紙厚・autoGenerate', () => {
+    it('正常な設定は値をそのまま読み取る', async () => {
+        const cfg = await readConfig({ paperSize: 'a4', writingMode: 'horizontal', bodyPaperThicknessMm: 0.09, coverPaperThicknessMm: 0.35 });
+        expect(cfg.paperSize).toBe('a4');
+        expect(cfg.writingMode).toBe('horizontal');
+        expect(cfg.bodyPaperThicknessMm).toBe(0.09);
+        expect(cfg.coverPaperThicknessMm).toBe(0.35);
+    });
+
+    it('不正な paperSize はデフォルト（a6）にフォールバック', async () => {
+        expect((await readConfig({ paperSize: 'b4' })).paperSize).toBe('a6');
+    });
+
+    it('不正な writingMode はデフォルト（vertical）にフォールバック', async () => {
+        expect((await readConfig({ writingMode: 'diagonal' })).writingMode).toBe('vertical');
+    });
+
+    it('紙厚が 0 以下・数値でないなら undefined', async () => {
+        const cfg = await readConfig({ bodyPaperThicknessMm: 0, coverPaperThicknessMm: '0.35' });
+        expect(cfg.bodyPaperThicknessMm).toBeUndefined();
+        expect(cfg.coverPaperThicknessMm).toBeUndefined();
+    });
+
+    it('autoGenerate は配列から文字列要素だけ抽出する', async () => {
+        const cfg = await readConfig({ autoGenerate: ['a.atb', 123, 'b.atb', null] });
+        expect(cfg.autoGenerate).toEqual(['a.atb', 'b.atb']);
+    });
+
+    it('autoGenerate が配列でなければ undefined', async () => {
+        expect((await readConfig({ autoGenerate: 'a.atb' })).autoGenerate).toBeUndefined();
+    });
+
+    it('outDir は文字列ならそのまま読み取る（前後の空白は落とす）', async () => {
+        expect((await readConfig({ outDir: 'out' })).outDir).toBe('out');
+        expect((await readConfig({ outDir: '  build/本  ' })).outDir).toBe('build/本');
+    });
+
+    it('outDir が空文字・空白のみ・文字列でなければ undefined', async () => {
+        expect((await readConfig({ outDir: '' })).outDir).toBeUndefined();
+        expect((await readConfig({ outDir: '   ' })).outDir).toBeUndefined();
+        expect((await readConfig({ outDir: 123 })).outDir).toBeUndefined();
+    });
+
+    it('設定ファイルが無ければデフォルト設定を返す', async () => {
+        const noConfigDir = path.join(dir, 'no-config');
+        await mkdir(noConfigDir, { recursive: true });
+        const cfg = await nodeConfigReader.read(path.join(noConfigDir, 'book.atb'));
+        expect(cfg).toMatchObject({ paperSize: 'a6', writingMode: 'vertical' });
+    });
+
+    it('壊れた JSON ならデフォルト設定を返す', async () => {
+        await writeFile(path.join(dir, 'at-book.config.json'), '{こわれてる', 'utf-8');
+        const cfg = await nodeConfigReader.read(path.join(dir, 'book.atb'));
+        expect(cfg).toMatchObject({ paperSize: 'a6', writingMode: 'vertical' });
+    });
+});
+
+// read は「読めなくても既定値で続ける」ための入口。
+// load は「読めたのか、無かったのか、壊れていたのか」を呼び出し側に伝える入口。
+describe('configReader の load（読み取り結果の区別）', () => {
+    it('正常に読めたら ok', async () => {
+        await writeFile(path.join(dir, 'at-book.config.json'), '{"paperSize":"a5"}', 'utf-8');
+        const result = await nodeConfigReader.load(path.join(dir, 'book.atb'));
+        expect(result.status).toBe('ok');
+        expect(result.config.paperSize).toBe('a5');
+    });
+
+    it('設定ファイルが無ければ missing（既定値付き）', async () => {
+        const noConfigDir = path.join(dir, 'no-config');
+        await mkdir(noConfigDir, { recursive: true });
+        const result = await nodeConfigReader.load(path.join(noConfigDir, 'book.atb'));
+        expect(result.status).toBe('missing');
+        expect(result.config).toMatchObject({ paperSize: 'a6', writingMode: 'vertical' });
+    });
+
+    it('JSON が壊れていたら invalid（理由付き）', async () => {
+        await writeFile(path.join(dir, 'at-book.config.json'), '{"autoGenerate": ["a.atb",]}', 'utf-8');
+        const result = await nodeConfigReader.load(path.join(dir, 'book.atb'));
+        expect(result.status).toBe('invalid');
+        expect(result.status === 'invalid' && result.reason).toBeTruthy();
+    });
+
+    it('トップレベルがオブジェクトでなければ invalid', async () => {
+        await writeFile(path.join(dir, 'at-book.config.json'), '["a.atb"]', 'utf-8');
+        const result = await nodeConfigReader.load(path.join(dir, 'book.atb'));
+        expect(result.status).toBe('invalid');
     });
 });

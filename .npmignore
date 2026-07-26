@@ -1,0 +1,8 @@
+# npm は .npmignore が無いと .gitignore にフォールバックする。
+# ルート .gitignore には dist/ が入っているため、そのままだと bin が指す
+# dist/cli/index.js ごと tarball から抜け落ちる。それを防ぐためにこのファイルを置く。
+#
+# 実際の同梱物は package.json の "files"（dist / fonts）で決まる。
+# ここに書くのは、その中に紛れ込むビルド副産物だけでよい。
+
+*.tsbuildinfo

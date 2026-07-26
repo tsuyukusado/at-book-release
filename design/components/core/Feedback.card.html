@@ -1,0 +1,40 @@
+<!-- @dsCard group="Components" name="StatusBadge / Callout" subtitle="状態は無彩色、失敗だけ朱。注意帯は左の縦罫で示す" viewport="620x380" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">StatusBadge</p>
+    <div class="spec__row" style="gap:24px">
+      <span class="atb-status atb-status--idle">待機</span>
+      <span class="atb-status atb-status--running">組版中</span>
+      <span class="atb-status atb-status--done">完了</span>
+      <span class="atb-status atb-status--failed">失敗</span>
+    </div>
+    <p class="spec__note">「組版中」のドットだけが明滅する。進捗バーは置かない — Vivliostyle の所要時間は読めないので、嘘の進捗率を出さない。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">Callout — 通常</p>
+    <div class="atb-callout">
+      <div><span class="atb-callout__title">初回だけ時間がかかる</span>組版に使う Chromium（数百MB）を最初の一度だけ取得する。ネットワークに繋がった状態で実行すること。</div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">Callout — エラー</p>
+    <div class="atb-callout atb-callout--error">
+      <div><span class="atb-callout__title">at-book.config.json が壊れている</span>13 行目、<span class="atb-mono">"formats"</span> の後にカンマが足りない。直すべき場所を必ず指す。</div>
+    </div>
+    <p class="spec__note">＠本の ConfigLoad は「無い」と「壊れている」を区別する。UI もそれを潰さず、別の文面で出す。</p>
+  </div>
+
+</div>
+</body>
+</html>

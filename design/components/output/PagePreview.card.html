@@ -1,0 +1,49 @@
+<!-- @dsCard group="Output" name="PagePreview — 紙面" subtitle="縦組み・ルビ・圏点・縦中横・ノンブル。横組みも併記" viewport="660x420" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+<style>
+  .pair { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; align-items: start; }
+  .cap { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-faint); margin-top: 8px; letter-spacing: .06em; }
+</style>
+</head>
+<body>
+<div class="spec">
+  <div class="pair">
+
+    <div>
+      <p class="spec__label">縦組み — vertical（既定）</p>
+      <div class="atb-preview">
+        <h3 class="atb-preview__title">第一章　序</h3>
+        <p><ruby>黄昏<rt>たそがれ</rt></ruby>の街に、鐘が鳴った。</p>
+        <p>少年は顔を上げる。空はもう<ruby>茜<rt>あかね</rt></ruby>色で、彼の知る限り<span class="tenten">いちばん美しい</span>色をしていた。</p>
+        <p>「行こう<span class="tcy">!?</span>」</p>
+        <p>返事はない。ただ、風が頁をめくる音だけがした・・</p>
+        <div class="atb-preview__folio">14</div>
+      </div>
+      <div class="cap">writing-mode: vertical-rl</div>
+    </div>
+
+    <div>
+      <p class="spec__label">横組み — horizontal</p>
+      <div class="atb-preview atb-preview--horizontal" style="height:300px">
+        <h3 class="atb-preview__title">第一章　序</h3>
+        <p><ruby>黄昏<rt>たそがれ</rt></ruby>の街に、鐘が鳴った。</p>
+        <p>少年は顔を上げる。空はもう<ruby>茜<rt>あかね</rt></ruby>色で、彼の知る限り<span class="tenten">いちばん美しい</span>色をしていた。</p>
+        <div class="atb-preview__folio">14</div>
+      </div>
+      <div class="cap">writing-mode: horizontal-tb</div>
+    </div>
+
+  </div>
+
+  <p class="spec__note">
+    紙面だけは影を <span class="atb-mono">--shadow-page</span> にして、下辺に接地線を一本持たせる。画面の中で「紙が一枚置いてある」と読めるのはここだけ。
+    縦中横（<span class="atb-mono">text-combine-upright</span>）は Kindle 側で効かせるのに OPF メタが要るので、EPUB 生成後に注入する。
+  </p>
+</div>
+</body>
+</html>

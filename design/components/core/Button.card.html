@@ -1,0 +1,47 @@
+<!-- @dsCard group="Components" name="Button" subtitle="primary（墨ベタ）/ secondary / ghost / danger（朱）・sm / md / lg" viewport="620x360" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">Variants</p>
+    <div class="spec__row">
+      <button class="atb-btn atb-btn--primary">組版する</button>
+      <button class="atb-btn atb-btn--secondary">設定を保存</button>
+      <button class="atb-btn atb-btn--ghost">キャンセル</button>
+      <button class="atb-btn atb-btn--danger">原稿を破棄</button>
+    </div>
+    <p class="spec__note">primary は画面に一つだけ。朱の danger は戻せない操作に限る。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">Sizes</p>
+    <div class="spec__row">
+      <button class="atb-btn atb-btn--secondary atb-btn--sm">小</button>
+      <button class="atb-btn atb-btn--secondary">標準</button>
+      <button class="atb-btn atb-btn--secondary atb-btn--lg">大</button>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">States</p>
+    <div class="spec__row">
+      <button class="atb-btn atb-btn--primary" disabled>原稿がない</button>
+      <button class="atb-btn atb-btn--primary" style="box-shadow:var(--shadow-focus)">focus-visible</button>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">Block — 実行系</p>
+    <button class="atb-btn atb-btn--primary atb-btn--lg atb-btn--block">組版する</button>
+  </div>
+
+</div>
+</body>
+</html>

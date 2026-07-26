@@ -1,0 +1,39 @@
+<!-- @dsCard group="Components" name="SegmentedControl" subtitle="paperSize（a4/a5/a6/b5）と writingMode（縦/横）。クリックで切り替わる" viewport="620x330" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">paperSize</p>
+    <div class="atb-seg">
+      <input class="atb-seg__input" type="radio" name="paper" id="pa4"><label class="atb-seg__item" for="pa4">A4</label>
+      <input class="atb-seg__input" type="radio" name="paper" id="pa5"><label class="atb-seg__item" for="pa5">A5</label>
+      <input class="atb-seg__input" type="radio" name="paper" id="pa6" checked><label class="atb-seg__item" for="pa6">A6</label>
+      <input class="atb-seg__input" type="radio" name="paper" id="pb5"><label class="atb-seg__item" for="pb5">B5</label>
+    </div>
+    <p class="spec__note">既定は A6（文庫判）。＠本の <span class="atb-mono">defaultPaperConfig</span> に合わせる。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">writingMode</p>
+    <div class="atb-seg">
+      <input class="atb-seg__input" type="radio" name="wm" id="wv" checked><label class="atb-seg__item" for="wv">縦書き</label>
+      <input class="atb-seg__input" type="radio" name="wm" id="wh"><label class="atb-seg__item" for="wh">横書き</label>
+    </div>
+    <p class="spec__note">既定は縦書き。日本語小説を組む道具なので、横書きの方が例外。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">選択の表現</p>
+    <p class="spec__note">選択中は墨のベタ塗り＋白抜き。朱は使わない — 用紙の選択は「取り返しがつく操作」だからだ。</p>
+  </div>
+
+</div>
+</body>
+</html>

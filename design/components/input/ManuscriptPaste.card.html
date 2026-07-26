@@ -1,0 +1,52 @@
+<!-- @dsCard group="Input" name="ManuscriptPaste — 貼り付け" subtitle="明朝・広い行送りの原稿枠。空 / 入力済み" viewport="640x600" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">タブ — 入力方法の切り替え</p>
+    <div class="atb-tabs">
+      <button class="atb-tab" aria-selected="true">貼り付け</button>
+      <button class="atb-tab" aria-selected="false">ファイル</button>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">空 — empty</p>
+    <div class="atb-paste">
+      <textarea class="atb-paste__area" style="min-height:96px" placeholder="ここに原稿を貼り付ける。&#10;＠マークの記法がそのまま使える。"></textarea>
+      <div class="atb-paste__foot">
+        <span>0 字 / 0 行</span>
+        <span>＠記法をそのまま解釈</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">入力済み — filled</p>
+    <div class="atb-paste">
+      <textarea class="atb-paste__area" style="min-height:150px">＠第一章　序
+
+　＠黄昏（たそがれ）の街に、鐘が鳴った。
+　少年は顔を上げる。空はもう＠茜（あかね）色で、彼の知る限りいちばん美しい色をしていた。
+
+　「行こう」
+
+　＠＠＠</textarea>
+      <div class="atb-paste__foot">
+        <span>132 字 / 9 行</span>
+        <span>見出し 1 ・ ルビ 2 ・ 改ページ 1</span>
+      </div>
+    </div>
+    <p class="spec__note">原稿枠だけは明朝・行送り 1.95。書いている最中の見え方を、組み上がりに寄せておく。</p>
+  </div>
+
+</div>
+</body>
+</html>

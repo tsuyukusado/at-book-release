@@ -1,0 +1,54 @@
+<!-- @dsCard group="Colors" name="墨 — Ink scale" subtitle="文字と罫の九段。無彩色よりわずかに暖色へ" viewport="620x400" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../card-frame.css">
+<style>
+  .swatches { display: grid; grid-template-columns: repeat(9, 1fr); gap: 0; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--color-rule); }
+  .sw { height: 84px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; }
+  .keys { display: grid; grid-template-columns: repeat(9, 1fr); gap: 0; margin-top: 6px; }
+  .key { font-family: var(--font-mono); font-size: 9.5px; color: var(--color-text-faint); text-align: center; line-height: 1.5; }
+  .roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .role { border-left: 2px solid var(--color-rule); padding-left: 10px; }
+  .role b { display: block; font-family: var(--font-display); font-size: 15px; color: var(--color-text-strong); }
+  .role span { font-size: 11px; color: var(--color-text-muted); }
+</style>
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">Sumi — 墨</p>
+    <div class="swatches">
+      <div class="sw" style="background:var(--sumi-900); color:#fff">900</div>
+      <div class="sw" style="background:var(--sumi-800); color:#fff">800</div>
+      <div class="sw" style="background:var(--sumi-700); color:#fff">700</div>
+      <div class="sw" style="background:var(--sumi-600); color:#fff">600</div>
+      <div class="sw" style="background:var(--sumi-500); color:#fff">500</div>
+      <div class="sw" style="background:var(--sumi-400); color:#fff">400</div>
+      <div class="sw" style="background:var(--sumi-300); color:#2e2c2a">300</div>
+      <div class="sw" style="background:var(--sumi-200); color:#2e2c2a">200</div>
+      <div class="sw" style="background:var(--sumi-100); color:#2e2c2a">100</div>
+    </div>
+    <div class="keys">
+      <div class="key">#0f0f0e</div><div class="key">#1c1b1a</div><div class="key">#2e2c2a</div>
+      <div class="key">#4a4744</div><div class="key">#6b6763</div><div class="key">#918c86</div>
+      <div class="key">#b8b3ac</div><div class="key">#d6d1c9</div><div class="key">#e7e3db</div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">役割</p>
+    <div class="roles">
+      <div class="role"><b>900 – 700</b><span>大見出し／見出し／本文</span></div>
+      <div class="role"><b>600 – 400</b><span>副次本文／補助／プレースホルダ</span></div>
+      <div class="role"><b>300 – 100</b><span>強い罫／罫／区切り</span></div>
+    </div>
+  </div>
+
+  <p class="spec__note">純黒 #000 は使わない。紙に置いた墨は必ず温度を持つ。</p>
+</div>
+</body>
+</html>

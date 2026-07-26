@@ -1,0 +1,72 @@
+<!-- @dsCard group="Colors" name="紙 と 朱 — Paper & Vermilion" subtitle="面の四段と、画面の2%だけに許す差し色" viewport="620x420" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../card-frame.css">
+<style>
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--color-rule); border-radius: var(--r-sm); overflow: hidden; }
+  .sw { height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; padding-bottom: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--sumi-600); }
+  .sw i { font-style: normal; font-size: 9px; color: var(--sumi-400); }
+  .shu-row { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--color-rule); border-radius: var(--r-sm); overflow: hidden; }
+  .shu-sw { height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; padding-bottom: 8px; font-family: var(--font-mono); font-size: 10px; }
+  .shu-sw i { font-style: normal; font-size: 9px; opacity: .75; }
+  .demo { display: flex; gap: 14px; align-items: stretch; }
+  .demo__pane { flex: 1; background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: var(--r-sm); padding: 14px; }
+  .demo__pane h4 { margin: 0 0 8px; font-family: var(--font-display); font-size: 14px; color: var(--color-text-strong); }
+</style>
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">Washi — 紙</p>
+    <div class="strip">
+      <div class="sw" style="background:var(--washi-50)">50<i>#fbfaf7</i></div>
+      <div class="sw" style="background:var(--washi-100)">100<i>#f6f4ef</i></div>
+      <div class="sw" style="background:var(--washi-200)">200<i>#efece5</i></div>
+      <div class="sw" style="background:var(--washi-300)">300<i>#e5e1d8</i></div>
+    </div>
+    <p class="spec__note">50 = 浮いた面（カード・入力）／100 = ページ地／200 = 沈んだ面（ドロップ領域・ログ）／300 = 最深部</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">Shu — 朱</p>
+    <div class="shu-row">
+      <div class="shu-sw" style="background:var(--shu-600); color:#fff">600<i>#a8352a</i></div>
+      <div class="shu-sw" style="background:var(--shu-500); color:#fff">500<i>#c0392b</i></div>
+      <div class="shu-sw" style="background:var(--shu-400); color:#fff">400<i>#d4544a</i></div>
+      <div class="shu-sw" style="background:var(--shu-100); color:#a8352a">100<i>#f7e4e1</i></div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">朱を使ってよい場所 / いけない場所</p>
+    <div class="demo">
+      <div class="demo__pane">
+        <h4>使ってよい</h4>
+        <div class="atb-stack atb-stack--tight">
+          <span class="atb-status atb-status--failed">FAILED</span>
+          <div class="atb-row" style="gap:8px">
+            <button class="atb-btn atb-btn--danger atb-btn--sm">破棄</button>
+            <span style="font-size:11px;color:var(--color-text-muted)">戻せない操作</span>
+          </div>
+          <div style="border-left:2px solid var(--color-accent); padding-left:8px; font-size:11px; color:var(--color-accent-text)">エラー帯の縦罫</div>
+        </div>
+      </div>
+      <div class="demo__pane">
+        <h4>いけない</h4>
+        <div class="atb-stack atb-stack--tight">
+          <span style="font-size:11px;color:var(--color-text-muted)">・主ボタンのベタ塗り（墨で塗る）</span>
+          <span style="font-size:11px;color:var(--color-text-muted)">・見出しの着色</span>
+          <span style="font-size:11px;color:var(--color-text-muted)">・面の背景色</span>
+          <span style="font-size:11px;color:var(--color-text-muted)">・グラデーション／発光</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

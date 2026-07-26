@@ -1,0 +1,664 @@
+/* components.css — ＠本 組版 GUI のコンポーネント一式
+ *
+ * すべて `atb-` 接頭辞。素の HTML/CSS で完結し、JS なしで状態が出せるものは
+ * :checked / 修飾クラスで表現する。React 実装（*.jsx）もこの同じクラスを吐く。
+ */
+
+/* ══ 基盤 ═══════════════════════════════════════════════ */
+
+.atb-root {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--fs-14);
+    line-height: var(--lh-normal);
+    letter-spacing: var(--ls-normal);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 小見出しラベル。字間で格を作る、この系の署名 */
+.atb-eyebrow {
+    font-family: var(--font-body);
+    font-size: var(--fs-11);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-eyebrow);
+    color: var(--color-text-faint);
+    text-transform: uppercase;
+    margin: 0 0 var(--sp-3);
+}
+
+/* 明朝の見出し。＠本の紙面と同じ顔 */
+.atb-heading {
+    font-family: var(--font-display);
+    font-weight: var(--fw-bold);
+    color: var(--color-text-strong);
+    line-height: var(--lh-tight);
+    letter-spacing: var(--ls-tight);
+    margin: 0;
+}
+.atb-heading--xl { font-size: var(--fs-32); }
+.atb-heading--lg { font-size: var(--fs-24); }
+.atb-heading--md { font-size: var(--fs-19); }
+
+.atb-rule {
+    border: 0;
+    border-top: var(--rule-thin) solid var(--color-rule);
+    margin: var(--sp-5) 0;
+}
+
+.atb-panel {
+    background: var(--color-surface);
+    border: var(--rule-thin) solid var(--color-rule);
+    border-radius: var(--r-md);
+    padding: var(--sp-5);
+}
+
+/* ══ ボタン ═════════════════════════════════════════════ */
+
+.atb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    font-family: var(--font-body);
+    font-size: var(--fs-14);
+    font-weight: var(--fw-medium);
+    letter-spacing: var(--ls-loose);
+    line-height: 1;
+    padding: 11px var(--sp-5);
+    border: var(--rule-thin) solid transparent;
+    border-radius: var(--r-sm);
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background var(--t-base), color var(--t-base),
+                border-color var(--t-base), box-shadow var(--t-base);
+    white-space: nowrap;
+}
+
+.atb-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+}
+
+.atb-btn:disabled,
+.atb-btn[aria-disabled='true'] {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+/* 主。墨のベタ。画面に一つだけ */
+.atb-btn--primary {
+    background: var(--color-text-strong);
+    color: var(--color-text-invert);
+    border-color: var(--color-text-strong);
+}
+.atb-btn--primary:hover:not(:disabled) { background: var(--sumi-700); border-color: var(--sumi-700); }
+.atb-btn--primary:active:not(:disabled) { background: var(--sumi-900); }
+
+/* 副。罫だけ */
+.atb-btn--secondary {
+    border-color: var(--color-rule-strong);
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+.atb-btn--secondary:hover:not(:disabled) {
+    border-color: var(--color-text-strong);
+    color: var(--color-text-strong);
+}
+
+/* 影。地に溶ける */
+.atb-btn--ghost { color: var(--color-text-muted); }
+.atb-btn--ghost:hover:not(:disabled) {
+    background: var(--color-surface-sunken);
+    color: var(--color-text-strong);
+}
+
+/* 朱。取り消し・破棄など、戻せない操作にだけ */
+.atb-btn--danger {
+    border-color: var(--color-accent);
+    color: var(--color-accent-text);
+    background: transparent;
+}
+.atb-btn--danger:hover:not(:disabled) {
+    background: var(--color-accent);
+    color: var(--color-text-invert);
+}
+
+.atb-btn--sm { font-size: var(--fs-13); padding: 7px var(--sp-3); }
+.atb-btn--lg { font-size: var(--fs-16); padding: 15px var(--sp-6); }
+.atb-btn--block { display: flex; width: 100%; }
+
+/* ══ 入力フィールド ═════════════════════════════════════ */
+
+.atb-field { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.atb-label {
+    font-size: var(--fs-13);
+    font-weight: var(--fw-medium);
+    color: var(--color-text);
+    letter-spacing: var(--ls-normal);
+}
+.atb-label__opt {
+    font-size: var(--fs-11);
+    color: var(--color-text-faint);
+    font-weight: var(--fw-normal);
+    margin-left: var(--sp-2);
+}
+
+.atb-input {
+    font-family: var(--font-body);
+    font-size: var(--fs-14);
+    color: var(--color-text-strong);
+    background: var(--color-surface);
+    border: var(--rule-thin) solid var(--color-rule-strong);
+    border-radius: var(--r-sm);
+    padding: 10px var(--sp-3);
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color var(--t-base), box-shadow var(--t-base);
+}
+.atb-input::placeholder { color: var(--color-text-faint); }
+.atb-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-focus);
+}
+/* パス・数値は等幅 */
+.atb-input--mono { font-family: var(--font-mono); font-size: var(--fs-13); }
+.atb-input--num  { font-family: var(--font-mono); max-width: 9rem; text-align: right; }
+
+.atb-hint {
+    font-size: var(--fs-12);
+    color: var(--color-text-muted);
+    line-height: var(--lh-snug);
+}
+.atb-error {
+    font-size: var(--fs-12);
+    color: var(--color-accent-text);
+    line-height: var(--lh-snug);
+}
+
+/* 単位付き入力（mm） */
+.atb-unit { display: flex; align-items: center; gap: var(--sp-2); }
+.atb-unit__suffix {
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+    color: var(--color-text-muted);
+}
+
+/* ══ セグメント（用紙・組方向） ═════════════════════════ */
+
+.atb-seg {
+    display: inline-flex;
+    border: var(--rule-thin) solid var(--color-rule-strong);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    background: var(--color-surface);
+}
+.atb-seg__input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.atb-seg__item {
+    padding: 9px var(--sp-4);
+    font-size: var(--fs-13);
+    font-weight: var(--fw-medium);
+    letter-spacing: var(--ls-loose);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-right: var(--rule-thin) solid var(--color-rule);
+    transition: background var(--t-base), color var(--t-base);
+    user-select: none;
+}
+.atb-seg__item:last-of-type { border-right: 0; }
+.atb-seg__item:hover { background: var(--color-surface-sunken); color: var(--color-text); }
+
+.atb-seg__input:checked + .atb-seg__item {
+    background: var(--color-text-strong);
+    color: var(--color-text-invert);
+}
+.atb-seg__input:focus-visible + .atb-seg__item {
+    box-shadow: inset var(--shadow-focus);
+}
+
+/* ══ 出力フォーマット（複数選択） ═══════════════════════ */
+
+.atb-fmt { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+
+.atb-fmt__input { position: absolute; opacity: 0; pointer-events: none; }
+
+.atb-fmt__item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 132px;
+    padding: var(--sp-3) var(--sp-4);
+    border: var(--rule-thin) solid var(--color-rule-strong);
+    border-radius: var(--r-sm);
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: border-color var(--t-base), background var(--t-base);
+    user-select: none;
+}
+.atb-fmt__item:hover { border-color: var(--color-text-faint); }
+
+.atb-fmt__name {
+    font-family: var(--font-mono);
+    font-size: var(--fs-13);
+    font-weight: var(--fw-medium);
+    color: var(--color-text-strong);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+/* チェック標。□ → ■ */
+.atb-fmt__name::before {
+    content: '';
+    width: 11px;
+    height: 11px;
+    border: var(--rule-thin) solid var(--color-rule-strong);
+    border-radius: 1px;
+    flex: none;
+    transition: background var(--t-base), border-color var(--t-base);
+}
+.atb-fmt__desc { font-size: var(--fs-11); color: var(--color-text-muted); }
+
+.atb-fmt__input:checked + .atb-fmt__item {
+    border-color: var(--color-text-strong);
+    background: var(--color-surface);
+}
+.atb-fmt__input:checked + .atb-fmt__item .atb-fmt__name::before {
+    background: var(--color-text-strong);
+    border-color: var(--color-text-strong);
+}
+.atb-fmt__input:focus-visible + .atb-fmt__item { box-shadow: var(--shadow-focus); }
+
+/* ══ ドロップ領域 ═══════════════════════════════════════ */
+
+.atb-drop {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    min-height: 220px;
+    padding: var(--sp-6);
+    text-align: center;
+    background: var(--color-surface-sunken);
+    border: var(--rule-thick) dashed var(--color-rule-strong);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-inset);
+    transition: border-color var(--t-base), background var(--t-base);
+    cursor: pointer;
+}
+.atb-drop:hover { border-color: var(--color-text-faint); }
+
+.atb-drop__mark {
+    font-family: var(--font-display);
+    font-size: var(--fs-32);
+    color: var(--color-text-faint);
+    line-height: 1;
+    transition: color var(--t-base);
+}
+.atb-drop__title {
+    font-family: var(--font-display);
+    font-size: var(--fs-19);
+    font-weight: var(--fw-medium);
+    color: var(--color-text-strong);
+}
+.atb-drop__sub { font-size: var(--fs-13); color: var(--color-text-muted); }
+.atb-drop__types {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    color: var(--color-text-faint);
+    letter-spacing: var(--ls-loose);
+}
+
+/* ドラッグが領域に入っている。朱の実線に変わる */
+.atb-drop--over {
+    border-style: solid;
+    border-color: var(--color-accent);
+    background: var(--color-accent-weak);
+}
+.atb-drop--over .atb-drop__mark { color: var(--color-accent); }
+
+/* 受理済み。高さを詰めて一覧に譲る */
+.atb-drop--filled {
+    min-height: 0;
+    padding: var(--sp-4);
+    border-style: solid;
+    border-color: var(--color-rule);
+    background: var(--color-surface);
+    box-shadow: none;
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+}
+
+/* 却下。拡張子違いなど */
+.atb-drop--reject {
+    border-style: solid;
+    border-color: var(--color-accent);
+    background: var(--color-accent-weak);
+}
+
+/* ══ 原稿貼り付け ═══════════════════════════════════════ */
+
+.atb-paste {
+    display: flex;
+    flex-direction: column;
+    border: var(--rule-thin) solid var(--color-rule-strong);
+    border-radius: var(--r-md);
+    background: var(--color-surface);
+    overflow: hidden;
+}
+.atb-paste:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-focus);
+}
+
+.atb-paste__area {
+    font-family: var(--font-manuscript);
+    font-size: var(--fs-16);
+    line-height: var(--lh-manuscript);
+    letter-spacing: var(--ls-normal);
+    color: var(--color-text-strong);
+    background: transparent;
+    border: 0;
+    resize: vertical;
+    padding: var(--sp-5);
+    min-height: 200px;
+    outline: none;
+}
+.atb-paste__area::placeholder { color: var(--color-text-faint); }
+
+/* 下辺のステータス帯。文字数・行数 */
+.atb-paste__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    padding: var(--sp-2) var(--sp-4);
+    border-top: var(--rule-thin) solid var(--color-rule-soft);
+    background: var(--color-surface-sunken);
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    color: var(--color-text-muted);
+}
+
+/* ══ タブ（貼り付け / ファイル） ════════════════════════ */
+
+.atb-tabs {
+    display: flex;
+    gap: var(--sp-5);
+    border-bottom: var(--rule-thin) solid var(--color-rule);
+}
+.atb-tab {
+    position: relative;
+    padding: var(--sp-3) 0;
+    /* button は font を継承しない。指定しないと UA 既定に落ちて和字が豆腐になる */
+    font-family: var(--font-body);
+    font-size: var(--fs-14);
+    font-weight: var(--fw-medium);
+    letter-spacing: var(--ls-loose);
+    color: var(--color-text-muted);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition: color var(--t-base);
+}
+.atb-tab:hover { color: var(--color-text-strong); }
+.atb-tab[aria-selected='true'] { color: var(--color-text-strong); }
+/* 選択中の下線は朱。「今ここ」を示す唯一の朱 */
+.atb-tab[aria-selected='true']::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: var(--rule-thick);
+    background: var(--color-accent);
+}
+
+/* ══ ファイル一覧 ═══════════════════════════════════════ */
+
+.atb-files {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: var(--rule-thin) solid var(--color-rule);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--color-surface);
+}
+.atb-file {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: var(--rule-thin) solid var(--color-rule-soft);
+}
+.atb-file:last-child { border-bottom: 0; }
+
+.atb-file__ext {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    font-weight: var(--fw-medium);
+    letter-spacing: var(--ls-loose);
+    color: var(--color-text-muted);
+    border: var(--rule-thin) solid var(--color-rule-strong);
+    border-radius: var(--r-xs);
+    padding: 3px var(--sp-2);
+    flex: none;
+}
+.atb-file__name {
+    font-family: var(--font-mono);
+    font-size: var(--fs-13);
+    color: var(--color-text-strong);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.atb-file__meta {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    color: var(--color-text-faint);
+    flex: none;
+}
+.atb-file__remove {
+    flex: none;
+    background: none;
+    font-family: var(--font-body);
+    border: 0;
+    color: var(--color-text-faint);
+    font-size: var(--fs-14);
+    line-height: 1;
+    padding: var(--sp-1);
+    cursor: pointer;
+    border-radius: var(--r-xs);
+    transition: color var(--t-base), background var(--t-base);
+}
+.atb-file__remove:hover { color: var(--color-accent-text); background: var(--color-accent-weak); }
+
+/* 不正なファイル */
+.atb-file--invalid .atb-file__name { color: var(--color-accent-text); }
+.atb-file--invalid .atb-file__ext {
+    border-color: var(--color-accent);
+    color: var(--color-accent-text);
+}
+
+/* ══ 状態バッジ ═════════════════════════════════════════ */
+
+.atb-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    letter-spacing: var(--ls-loose);
+    color: var(--color-text-muted);
+}
+.atb-status::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: var(--r-pill);
+    background: currentColor;
+    flex: none;
+}
+.atb-status--idle    { color: var(--color-text-faint); }
+.atb-status--running { color: var(--color-running); }
+.atb-status--running::before { animation: atb-pulse 1.1s var(--ease-soft) infinite; }
+.atb-status--done    { color: var(--color-done); }
+.atb-status--failed  { color: var(--color-failed); }
+
+@keyframes atb-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: .25; }
+}
+
+/* ══ 注意帯 ═════════════════════════════════════════════ */
+
+.atb-callout {
+    display: flex;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-sm);
+    font-size: var(--fs-13);
+    line-height: var(--lh-snug);
+    /* 左の縦罫で種別を示す。面は塗らない */
+    border-left: var(--rule-thick) solid var(--color-rule-strong);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+}
+.atb-callout__title {
+    font-weight: var(--fw-bold);
+    color: var(--color-text-strong);
+    display: block;
+    margin-bottom: 2px;
+}
+.atb-callout--error {
+    border-left-color: var(--color-accent);
+    background: var(--color-accent-weak);
+}
+.atb-callout--error .atb-callout__title { color: var(--color-accent-text); }
+
+/* ══ ビルドログ ═════════════════════════════════════════ */
+
+.atb-log {
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+    line-height: 1.85;
+    background: var(--color-surface-deep);
+    border: var(--rule-thin) solid var(--color-rule);
+    border-radius: var(--r-md);
+    padding: var(--sp-4);
+    max-height: 260px;
+    overflow: auto;
+    color: var(--color-text-muted);
+}
+.atb-log__line { display: flex; gap: var(--sp-3); white-space: pre-wrap; }
+.atb-log__time { color: var(--color-text-faint); flex: none; }
+.atb-log__line--ok   { color: var(--color-text-strong); }
+.atb-log__line--warn { color: var(--color-text); }
+.atb-log__line--err  { color: var(--color-accent-text); }
+
+/* ══ 成果物 ═════════════════════════════════════════════ */
+
+.atb-artifact {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    padding: var(--sp-4);
+    border: var(--rule-thin) solid var(--color-rule);
+    border-radius: var(--r-md);
+    background: var(--color-surface);
+    transition: border-color var(--t-base), box-shadow var(--t-base);
+}
+.atb-artifact:hover { border-color: var(--color-rule-strong); box-shadow: var(--shadow-raise); }
+
+.atb-artifact__kind {
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+    font-weight: var(--fw-medium);
+    letter-spacing: var(--ls-loose);
+    color: var(--color-text-invert);
+    background: var(--color-text-strong);
+    border-radius: var(--r-xs);
+    padding: var(--sp-2) var(--sp-3);
+    flex: none;
+}
+.atb-artifact__body { flex: 1; min-width: 0; }
+.atb-artifact__name {
+    font-family: var(--font-mono);
+    font-size: var(--fs-13);
+    color: var(--color-text-strong);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.atb-artifact__meta { font-size: var(--fs-11); color: var(--color-text-muted); }
+
+/* ══ 紙面プレビュー（縦組み） ═══════════════════════════ */
+
+.atb-preview {
+    background: var(--color-surface);
+    border: var(--rule-thin) solid var(--color-rule);
+    box-shadow: var(--shadow-page);
+    border-radius: var(--r-xs);
+    padding: var(--sp-6) var(--sp-5);
+    /* 縦組み。＠本の既定 */
+    writing-mode: vertical-rl;
+    font-family: var(--font-manuscript);
+    font-size: var(--fs-14);
+    line-height: var(--lh-manuscript);
+    letter-spacing: var(--ls-normal);
+    color: var(--color-text-strong);
+    height: 300px;
+    overflow: hidden;
+}
+.atb-preview--horizontal { writing-mode: horizontal-tb; }
+
+.atb-preview__title {
+    font-size: var(--fs-19);
+    font-weight: var(--fw-bold);
+    margin: 0 0 var(--sp-5) 0;
+}
+.atb-preview p { margin: 0 0 var(--sp-3) 0; text-indent: 1em; }
+
+/* ルビ */
+.atb-preview ruby { ruby-position: over; }
+.atb-preview rt { font-size: .5em; letter-spacing: 0; }
+
+/* 圏点 */
+.atb-preview .tenten {
+    text-emphasis: filled dot;
+    -webkit-text-emphasis: filled dot;
+}
+
+/* 縦中横。！？ など */
+.atb-preview .tcy {
+    text-combine-upright: all;
+    -webkit-text-combine: horizontal;
+}
+
+/* ノンブル */
+.atb-preview__folio {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    color: var(--color-text-faint);
+    text-combine-upright: all;
+}
+
+/* ══ 補助 ═══════════════════════════════════════════════ */
+
+.atb-stack   { display: flex; flex-direction: column; gap: var(--sp-4); }
+.atb-stack--tight { gap: var(--sp-2); }
+.atb-row     { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.atb-spacer  { flex: 1; }
+.atb-mono    { font-family: var(--font-mono); font-size: var(--fs-13); }

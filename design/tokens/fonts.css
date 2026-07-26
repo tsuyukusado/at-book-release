@@ -1,0 +1,28 @@
+/* fonts.css — 書体の読み込み
+ *
+ * 明朝（Shippori Mincho）が主役。＠本が組む本文そのものが明朝なので、
+ * GUI 側の見出し・原稿プレビューも同じ書体で通し、「本を書いている画面」に見せる。
+ * UI の操作系だけはゴシック（Zen Kaku Gothic New）に落として可読性を確保する。
+ * パス・ログ・＠記法は等幅。
+ *
+ * ＠本リポジトリ本体は fonts/ に Shippori Mincho の実体（TTF）を同梱している。
+ * 実装に落とすときは CDN ではなくそちらを @font-face で読むこと。
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    /* 見出し・書名・原稿。＠本の紙面と同じ表情 */
+    --font-display: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    --font-manuscript: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+
+    /* UI 操作系。ラベル・ボタン・入力 */
+    --font-body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+
+    /* パス・ビルドログ・＠記法の提示
+     * 等幅欧文書体は和字を持たない。ログにも単位（字・件・枚）にも和字が混じるので、
+     * CJK のフォールバックを必ず後ろに繋ぐこと。抜くと豆腐（□）になる。 */
+    --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Noto Sans Mono',
+                 'Noto Sans Mono CJK JP', 'Zen Kaku Gothic New', 'Hiragino Sans',
+                 'Yu Gothic', monospace;
+}

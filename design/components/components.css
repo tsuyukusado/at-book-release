@@ -275,92 +275,93 @@
 }
 .atb-fmt__input:focus-visible + .atb-fmt__item { box-shadow: var(--shadow-focus); }
 
-/* ══ ドロップ領域 ═══════════════════════════════════════ */
+/* ══ 原稿面（貼り付け・ドロップ共通） ═══════════════════
+ *
+ * 貼り付けもドラッグ＆ドロップも、受け口はこの一面だけ。
+ * 入力方法でタブを分けない — 利用者にとっては同じ「原稿を置く」行為だから。
+ */
 
-.atb-drop {
+.atb-canvas {
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--sp-3);
-    min-height: 220px;
-    padding: var(--sp-6);
-    text-align: center;
-    background: var(--color-surface-sunken);
     border: var(--rule-thick) dashed var(--color-rule-strong);
     border-radius: var(--r-lg);
+    background: var(--color-surface);
     box-shadow: var(--shadow-inset);
     transition: border-color var(--t-base), background var(--t-base);
-    cursor: pointer;
+    overflow: hidden;
 }
-.atb-drop:hover { border-color: var(--color-text-faint); }
 
-.atb-drop__mark {
+/* 何か入ったら点線をやめ、静かな実線の面になる */
+.atb-canvas--has-files,
+.atb-canvas:not(:has(.atb-canvas__text:placeholder-shown)) {
+    border-style: solid;
+    border-width: var(--rule-thin);
+    border-color: var(--color-rule);
+    box-shadow: none;
+}
+
+.atb-canvas:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-focus);
+}
+
+/* ドラッグが乗っている。面が朱に染まる唯一の瞬間 */
+.atb-canvas--over {
+    border-style: solid;
+    border-color: var(--color-accent);
+    background: var(--color-accent-weak);
+}
+
+/* 空のときだけ中央に浮かぶ誘い文句。入力を邪魔しない */
+.atb-canvas__invite {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    text-align: center;
+    pointer-events: none;
+}
+.atb-canvas:not(.atb-canvas--has-files):has(.atb-canvas__text:placeholder-shown) .atb-canvas__invite {
+    display: flex;
+}
+
+.atb-canvas__mark {
     font-family: var(--font-display);
     font-size: var(--fs-32);
-    color: var(--color-text-faint);
     line-height: 1;
-    transition: color var(--t-base);
+    color: var(--color-text-faint);
 }
-.atb-drop__title {
+.atb-canvas--over .atb-canvas__mark { color: var(--color-accent); }
+
+.atb-canvas__title {
     font-family: var(--font-display);
     font-size: var(--fs-19);
     font-weight: var(--fw-medium);
     color: var(--color-text-strong);
 }
-.atb-drop__sub { font-size: var(--fs-13); color: var(--color-text-muted); }
-.atb-drop__types {
+.atb-canvas__sub { font-size: var(--fs-13); color: var(--color-text-muted); }
+.atb-canvas__types {
     font-family: var(--font-mono);
     font-size: var(--fs-11);
     color: var(--color-text-faint);
     letter-spacing: var(--ls-loose);
 }
 
-/* ドラッグが領域に入っている。朱の実線に変わる */
-.atb-drop--over {
-    border-style: solid;
-    border-color: var(--color-accent);
-    background: var(--color-accent-weak);
-}
-.atb-drop--over .atb-drop__mark { color: var(--color-accent); }
-
-/* 受理済み。高さを詰めて一覧に譲る */
-.atb-drop--filled {
-    min-height: 0;
-    padding: var(--sp-4);
-    border-style: solid;
-    border-color: var(--color-rule);
-    background: var(--color-surface);
-    box-shadow: none;
-    flex-direction: row;
-    justify-content: space-between;
-    text-align: left;
+/* 落としたファイルは面の上端に積む */
+.atb-canvas__files {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-bottom: var(--rule-thin) solid var(--color-rule-soft);
 }
 
-/* 却下。拡張子違いなど */
-.atb-drop--reject {
-    border-style: solid;
-    border-color: var(--color-accent);
-    background: var(--color-accent-weak);
-}
-
-/* ══ 原稿貼り付け ═══════════════════════════════════════ */
-
-.atb-paste {
-    display: flex;
-    flex-direction: column;
-    border: var(--rule-thin) solid var(--color-rule-strong);
-    border-radius: var(--r-md);
-    background: var(--color-surface);
-    overflow: hidden;
-}
-.atb-paste:focus-within {
-    border-color: var(--color-accent);
-    box-shadow: var(--shadow-focus);
-}
-
-.atb-paste__area {
+/* 原稿そのもの。明朝・広い行送りで、組み上がりに寄せる */
+.atb-canvas__text {
     font-family: var(--font-manuscript);
     font-size: var(--fs-16);
     line-height: var(--lh-manuscript);
@@ -368,15 +369,17 @@
     color: var(--color-text-strong);
     background: transparent;
     border: 0;
-    resize: vertical;
-    padding: var(--sp-5);
-    min-height: 200px;
     outline: none;
+    resize: none;
+    padding: var(--sp-5);
+    min-height: 260px;
+    flex: 1;
 }
-.atb-paste__area::placeholder { color: var(--color-text-faint); }
+/* 誘い文句を別に描くので、placeholder 自体は見せない */
+.atb-canvas__text::placeholder { color: transparent; }
 
-/* 下辺のステータス帯。文字数・行数 */
-.atb-paste__foot {
+/* 下端の帯。字数と受け付ける形式 */
+.atb-canvas__foot {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -389,38 +392,83 @@
     color: var(--color-text-muted);
 }
 
-/* ══ タブ（貼り付け / ファイル） ════════════════════════ */
+/* ══ 設定（歯車の中） ═══════════════════════════════════
+ *
+ * 設定は普段しまっておく。組版のたびに触るものではないので、
+ * 常時見せると原稿と実行ボタンの邪魔になる。
+ */
 
-.atb-tabs {
-    display: flex;
-    gap: var(--sp-5);
-    border-bottom: var(--rule-thin) solid var(--color-rule);
-}
-.atb-tab {
-    position: relative;
-    padding: var(--sp-3) 0;
-    /* button は font を継承しない。指定しないと UA 既定に落ちて和字が豆腐になる */
+.atb-settings { position: relative; }
+
+.atb-settings__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
     font-family: var(--font-body);
-    font-size: var(--fs-14);
-    font-weight: var(--fw-medium);
-    letter-spacing: var(--ls-loose);
+    font-size: var(--fs-16);
+    line-height: 1;
     color: var(--color-text-muted);
     background: none;
-    border: 0;
+    border: var(--rule-thin) solid transparent;
+    border-radius: var(--r-sm);
     cursor: pointer;
-    transition: color var(--t-base);
+    transition: color var(--t-base), background var(--t-base), border-color var(--t-base);
 }
-.atb-tab:hover { color: var(--color-text-strong); }
-.atb-tab[aria-selected='true'] { color: var(--color-text-strong); }
-/* 選択中の下線は朱。「今ここ」を示す唯一の朱 */
-.atb-tab[aria-selected='true']::after {
-    content: '';
+.atb-settings__btn:hover {
+    color: var(--color-text-strong);
+    background: var(--color-surface-sunken);
+}
+.atb-settings__btn:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.atb-settings__btn[aria-expanded='true'] {
+    color: var(--color-text-strong);
+    border-color: var(--color-rule-strong);
+    background: var(--color-surface-sunken);
+}
+
+.atb-settings__panel {
     position: absolute;
-    left: 0;
+    top: calc(100% + var(--sp-2));
     right: 0;
-    bottom: -1px;
-    height: var(--rule-thick);
-    background: var(--color-accent);
+    z-index: 20;
+    width: 340px;
+    max-width: calc(100vw - var(--sp-6));
+    padding: var(--sp-5);
+    background: var(--color-surface);
+    border: var(--rule-thin) solid var(--color-rule-strong);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-page);
+    /* 背の低いウィンドウでも下端の設定に手が届くよう、パネル自身をスクロールさせる */
+    max-height: calc(100vh - 72px);
+    overflow-y: auto;
+}
+.atb-settings__panel[hidden] { display: none; }
+
+/* 狭いパネルの中では出力形式を二列に揃える。既定の min-width のままだと
+ * 説明文の長い PDF だけが一行を占めて不揃いになる */
+.atb-settings__panel .atb-fmt__item {
+    min-width: 0;
+    flex: 1 1 calc(50% - var(--sp-3) / 2);
+}
+
+.atb-settings__group {
+    padding-bottom: var(--sp-4);
+    margin-bottom: var(--sp-4);
+    border-bottom: var(--rule-thin) solid var(--color-rule-soft);
+}
+.atb-settings__group:last-child {
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-bottom: 0;
+}
+
+/* 開かなくても今の設定が読めるよう、一行で併記する */
+.atb-summary {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    letter-spacing: var(--ls-loose);
+    color: var(--color-text-muted);
 }
 
 /* ══ ファイル一覧 ═══════════════════════════════════════ */

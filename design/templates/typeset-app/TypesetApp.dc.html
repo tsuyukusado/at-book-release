@@ -1,4 +1,4 @@
-<!-- @dsCard group="Screens" name="組版画面 — Typeset" subtitle="貼り付け／ドロップ → 設定 → 組版 → 紙面と成果物。全体の click-through" viewport="1280x940" -->
+<!-- @dsCard group="Screens" name="組版画面 — Typeset" subtitle="原稿面ひとつ・組版ボタンひとつ・設定は歯車の中" viewport="900x760" -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -21,47 +21,39 @@
 
   /* ── ヘッダ ── */
   .hd {
-    display: flex; align-items: center; gap: var(--sp-4);
-    padding: var(--sp-4) var(--sp-6);
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-5);
     border-bottom: var(--rule-thin) solid var(--color-rule);
     background: var(--color-surface);
-    position: sticky; top: 0; z-index: 10;
   }
-  .hd__mark {
-    font-family: var(--font-display); font-size: 22px; font-weight: 700;
-    color: var(--color-text-strong); line-height: 1;
-  }
-  .hd__name {
-    font-family: var(--font-display); font-size: var(--fs-16);
-    color: var(--color-text-strong); letter-spacing: var(--ls-loose);
-  }
-  .hd__sep { width: 1px; height: 18px; background: var(--color-rule); }
-  .hd__path { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--color-text-muted); }
+  .hd__mark { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--color-text-strong); line-height: 1; }
+  .hd__name { font-family: var(--font-display); font-size: var(--fs-16); color: var(--color-text-strong); letter-spacing: var(--ls-loose); }
+  .hd__spacer { flex: 1; }
 
-  /* ── 版面 ── */
-  .wrap { max-width: var(--page-max); margin: 0 auto; padding: var(--sp-6); }
-  .cols { display: grid; grid-template-columns: 1.35fr 1fr; gap: var(--sp-6); align-items: start; }
-  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  /* ── 版面。中央一列だけ ── */
+  .wrap { max-width: 680px; margin: 0 auto; padding: var(--sp-7) var(--sp-5) var(--sp-8); }
 
-  .sec { margin-bottom: var(--sp-6); }
-  .sec__hd {
+  .run { margin-top: var(--sp-5); text-align: center; }
+  .run .atb-summary { display: block; margin-top: var(--sp-3); }
+
+  /* ── 結果。組版するまで出さない ── */
+  .results { margin-top: var(--sp-8); }
+  .results[hidden] { display: none; }
+  .results__hd {
     display: flex; align-items: baseline; justify-content: space-between;
-    gap: var(--sp-4); margin-bottom: var(--sp-3);
+    margin-bottom: var(--sp-3);
   }
-  .sec__title {
-    font-family: var(--font-display); font-size: var(--fs-19); font-weight: 700;
-    color: var(--color-text-strong); margin: 0;
+  .results__title { font-family: var(--font-display); font-size: var(--fs-19); font-weight: 700; color: var(--color-text-strong); margin: 0; }
+  .results__grid { display: grid; grid-template-columns: 1fr 220px; gap: var(--sp-5); align-items: start; }
+  @media (max-width: 640px) { .results__grid { grid-template-columns: 1fr; } }
+
+  details.log { margin-top: var(--sp-4); }
+  details.log > summary {
+    cursor: pointer; font-family: var(--font-mono); font-size: var(--fs-11);
+    letter-spacing: var(--ls-loose); color: var(--color-text-muted);
+    padding: var(--sp-2) 0;
   }
-  .sec__aside { font-family: var(--font-mono); font-size: var(--fs-11); color: var(--color-text-faint); }
-
-  .setting { padding-bottom: var(--sp-5); margin-bottom: var(--sp-5); border-bottom: var(--rule-thin) solid var(--color-rule-soft); }
-  .setting:last-child { border-bottom: 0; padding-bottom: 0; margin-bottom: 0; }
-
-  .results { display: grid; grid-template-columns: 1fr 300px; gap: var(--sp-6); align-items: start; }
-  @media (max-width: 900px) { .results { grid-template-columns: 1fr; } }
-
-  .run { position: sticky; bottom: 0; }
-  .hidden { display: none !important; }
+  details.log > summary:hover { color: var(--color-text-strong); }
 </style>
 </head>
 <body>
@@ -69,238 +61,292 @@
 <header class="hd">
   <span class="hd__mark">＠</span>
   <span class="hd__name">本 — 組版</span>
-  <span class="hd__sep"></span>
-  <span class="hd__path">~/novels/tasogare/doc</span>
-  <span style="flex:1"></span>
+  <span class="hd__spacer"></span>
   <span class="atb-status atb-status--idle" id="status">待機</span>
+
+  <div class="atb-settings">
+    <button class="atb-settings__btn" id="gear" aria-expanded="false" aria-label="設定">⚙</button>
+
+    <div class="atb-settings__panel" id="panel" hidden>
+      <div class="atb-settings__group">
+        <p class="atb-eyebrow">用紙</p>
+        <div class="atb-seg">
+          <input class="atb-seg__input" type="radio" name="paper" id="s-a4" value="A4"><label class="atb-seg__item" for="s-a4">A4</label>
+          <input class="atb-seg__input" type="radio" name="paper" id="s-a5" value="A5"><label class="atb-seg__item" for="s-a5">A5</label>
+          <input class="atb-seg__input" type="radio" name="paper" id="s-a6" value="A6" checked><label class="atb-seg__item" for="s-a6">A6</label>
+          <input class="atb-seg__input" type="radio" name="paper" id="s-b5" value="B5"><label class="atb-seg__item" for="s-b5">B5</label>
+        </div>
+      </div>
+
+      <div class="atb-settings__group">
+        <p class="atb-eyebrow">組方向</p>
+        <div class="atb-seg">
+          <input class="atb-seg__input" type="radio" name="wm" id="s-wv" value="縦書き" checked><label class="atb-seg__item" for="s-wv">縦書き</label>
+          <input class="atb-seg__input" type="radio" name="wm" id="s-wh" value="横書き"><label class="atb-seg__item" for="s-wh">横書き</label>
+        </div>
+      </div>
+
+      <div class="atb-settings__group">
+        <p class="atb-eyebrow">出力形式</p>
+        <div class="atb-fmt">
+          <input class="atb-fmt__input" type="checkbox" id="s-pdf" value="PDF" checked>
+          <label class="atb-fmt__item" for="s-pdf">
+            <span class="atb-fmt__name">PDF</span>
+            <span class="atb-fmt__desc">印刷用・ノンブル付き</span>
+          </label>
+          <input class="atb-fmt__input" type="checkbox" id="s-epub" value="EPUB">
+          <label class="atb-fmt__item" for="s-epub">
+            <span class="atb-fmt__name">EPUB</span>
+            <span class="atb-fmt__desc">電子書籍</span>
+          </label>
+          <input class="atb-fmt__input" type="checkbox" id="s-web" value="WEB">
+          <label class="atb-fmt__item" for="s-web">
+            <span class="atb-fmt__name">WEB</span>
+            <span class="atb-fmt__desc">投稿サイト向け</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="atb-settings__group">
+        <p class="atb-eyebrow">出力先</p>
+        <div class="atb-field">
+          <input class="atb-input atb-input--mono" id="s-out" value="at-book-out">
+          <span class="atb-hint">原稿フォルダからの相対パス。</span>
+        </div>
+      </div>
+
+      <div class="atb-settings__group">
+        <p class="atb-eyebrow">表紙テンプレート</p>
+        <div class="atb-stack atb-stack--tight">
+          <div class="atb-field">
+            <label class="atb-label" for="s-bt">本文用紙の厚さ<span class="atb-label__opt">任意</span></label>
+            <div class="atb-unit">
+              <input class="atb-input atb-input--num" id="s-bt" value="0.09">
+              <span class="atb-unit__suffix">mm / 枚</span>
+            </div>
+          </div>
+          <div class="atb-field">
+            <label class="atb-label" for="s-ct">表紙用紙の厚さ<span class="atb-label__opt">任意</span></label>
+            <div class="atb-unit">
+              <input class="atb-input atb-input--num" id="s-ct" value="0.23">
+              <span class="atb-unit__suffix">mm / 枚</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </header>
 
-<div class="wrap">
-  <div class="cols">
+<main class="wrap">
 
-    <!-- ══ 左 — 原稿 ══════════════════════════ -->
-    <main>
-      <section class="sec">
-        <div class="sec__hd">
-          <h2 class="sec__title">原稿</h2>
-          <span class="sec__aside" id="tally">3 件 ・ 19,222 字</span>
-        </div>
+  <!-- 原稿面。貼り付けもドロップもここひとつ -->
+  <div class="atb-canvas" id="canvas">
+    <div class="atb-canvas__invite">
+      <div class="atb-canvas__mark">＠</div>
+      <div class="atb-canvas__title">原稿をここへ</div>
+      <div class="atb-canvas__sub">貼り付け、またはファイルをドラッグ＆ドロップ</div>
+      <div class="atb-canvas__types">.atb / .txt / .md</div>
+    </div>
 
-        <div class="atb-tabs" style="margin-bottom:var(--sp-4)">
-          <button class="atb-tab" aria-selected="false" data-tab="paste">貼り付け</button>
-          <button class="atb-tab" aria-selected="true"  data-tab="file">ファイル</button>
-        </div>
+    <ul class="atb-canvas__files" id="files" hidden></ul>
 
-        <!-- 貼り付け -->
-        <div id="pane-paste" class="hidden">
-          <div class="atb-paste">
-            <textarea class="atb-paste__area" placeholder="ここに原稿を貼り付ける。&#10;＠マークの記法がそのまま使える。&#10;&#10;＠第一章　序&#10;　＠黄昏（たそがれ）の街に、鐘が鳴った。"></textarea>
-            <div class="atb-paste__foot">
-              <span>0 字 / 0 行</span>
-              <span>＠記法をそのまま解釈</span>
-            </div>
-          </div>
-        </div>
+    <textarea class="atb-canvas__text" id="text" placeholder="原稿" aria-label="原稿"></textarea>
 
-        <!-- ファイル -->
-        <div id="pane-file">
-          <div class="atb-drop atb-drop--filled" style="margin-bottom:var(--sp-3)">
-            <div class="atb-row" style="gap:var(--sp-3)">
-              <span class="atb-drop__mark" style="font-size:var(--fs-19)">＠</span>
-              <span style="color:var(--color-text-muted)">ここへドラッグ＆ドロップ</span>
-              <span class="atb-drop__types">.atb / .txt / .md</span>
-            </div>
-            <button class="atb-btn atb-btn--ghost atb-btn--sm">選択…</button>
-          </div>
-
-          <ul class="atb-files">
-            <li class="atb-file">
-              <span class="atb-file__ext">atb</span>
-              <span class="atb-file__name">01-prologue.atb</span>
-              <span class="atb-file__meta">2,140 字</span>
-              <button class="atb-file__remove" aria-label="外す">×</button>
-            </li>
-            <li class="atb-file">
-              <span class="atb-file__ext">atb</span>
-              <span class="atb-file__name">02-chapter-one.atb</span>
-              <span class="atb-file__meta">16,502 字</span>
-              <button class="atb-file__remove" aria-label="外す">×</button>
-            </li>
-            <li class="atb-file">
-              <span class="atb-file__ext">txt</span>
-              <span class="atb-file__name">03-afterword.txt</span>
-              <span class="atb-file__meta">580 字</span>
-              <button class="atb-file__remove" aria-label="外す">×</button>
-            </li>
-          </ul>
-          <p class="atb-hint" style="margin-top:var(--sp-2)">並び順がそのまま <span class="atb-mono">autoGenerate</span> の順序になる。</p>
-        </div>
-      </section>
-
-      <!-- ══ 結果 ══ -->
-      <section class="sec" id="results-sec">
-        <div class="sec__hd">
-          <h2 class="sec__title">結果</h2>
-          <span class="sec__aside">at-book-out/</span>
-        </div>
-
-        <div class="results">
-          <div class="atb-stack">
-            <div class="atb-log" id="log">
-              <div class="atb-log__line"><span class="atb-log__time">10:24:02</span><span>設定を読み込み  doc/at-book.config.json</span></div>
-              <div class="atb-log__line"><span class="atb-log__time">10:24:02</span><span>用紙 a6 ・ 縦書き ・ 出力 pdf</span></div>
-              <div class="atb-log__line atb-log__line--ok"><span class="atb-log__time">10:24:03</span><span>＠記法を解析  見出し 12 ・ ルビ 148 ・ 圏点 9</span></div>
-              <div class="atb-log__line"><span class="atb-log__time">10:24:05</span><span>Vivliostyle で組版…</span></div>
-              <div class="atb-log__line atb-log__line--warn"><span class="atb-log__time">10:24:11</span><span>警告: 03-afterword.txt に ＠目次 が二度ある。後方を無視した</span></div>
-              <div class="atb-log__line atb-log__line--ok"><span class="atb-log__time">10:24:18</span><span>PDF を書き出し  novel.pdf  (214 頁)</span></div>
-            </div>
-
-            <div class="atb-artifact">
-              <span class="atb-artifact__kind">PDF</span>
-              <div class="atb-artifact__body">
-                <div class="atb-artifact__name">novel.pdf</div>
-                <div class="atb-artifact__meta">A6 縦組み ・ 214 頁 ・ 3.8 MB</div>
-              </div>
-              <button class="atb-btn atb-btn--secondary atb-btn--sm">開く</button>
-            </div>
-
-            <div class="atb-artifact">
-              <span class="atb-artifact__kind">COVER</span>
-              <div class="atb-artifact__body">
-                <div class="atb-artifact__name">cover-template.pdf</div>
-                <div class="atb-artifact__meta">背幅 19.3 mm ・ 塗り足し 3 mm</div>
-              </div>
-              <button class="atb-btn atb-btn--secondary atb-btn--sm">開く</button>
-            </div>
-          </div>
-
-          <div>
-            <p class="atb-eyebrow">紙面</p>
-            <div class="atb-preview" style="height:260px">
-              <h3 class="atb-preview__title">第一章　序</h3>
-              <p><ruby>黄昏<rt>たそがれ</rt></ruby>の街に、鐘が鳴った。</p>
-              <p>空はもう<ruby>茜<rt>あかね</rt></ruby>色で、<span class="tenten">いちばん美しい</span>色をしていた。</p>
-              <p>「行こう<span class="tcy">!?</span>」</p>
-              <div class="atb-preview__folio">14</div>
-            </div>
-            <p class="atb-hint" style="margin-top:var(--sp-2)">14 / 214 頁</p>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- ══ 右 — 設定 ══════════════════════════ -->
-    <aside>
-      <div class="atb-panel">
-        <div class="sec__hd">
-          <h2 class="sec__title">組版設定</h2>
-          <span class="sec__aside">at-book.config.json</span>
-        </div>
-
-        <div class="setting">
-          <p class="atb-eyebrow">用紙</p>
-          <div class="atb-seg">
-            <input class="atb-seg__input" type="radio" name="paper" id="t-a4"><label class="atb-seg__item" for="t-a4">A4</label>
-            <input class="atb-seg__input" type="radio" name="paper" id="t-a5"><label class="atb-seg__item" for="t-a5">A5</label>
-            <input class="atb-seg__input" type="radio" name="paper" id="t-a6" checked><label class="atb-seg__item" for="t-a6">A6</label>
-            <input class="atb-seg__input" type="radio" name="paper" id="t-b5"><label class="atb-seg__item" for="t-b5">B5</label>
-          </div>
-        </div>
-
-        <div class="setting">
-          <p class="atb-eyebrow">組方向</p>
-          <div class="atb-seg">
-            <input class="atb-seg__input" type="radio" name="wm" id="t-wv" checked><label class="atb-seg__item" for="t-wv">縦書き</label>
-            <input class="atb-seg__input" type="radio" name="wm" id="t-wh"><label class="atb-seg__item" for="t-wh">横書き</label>
-          </div>
-        </div>
-
-        <div class="setting">
-          <p class="atb-eyebrow">出力形式</p>
-          <div class="atb-fmt">
-            <input class="atb-fmt__input" type="checkbox" id="t-pdf" checked>
-            <label class="atb-fmt__item" for="t-pdf">
-              <span class="atb-fmt__name">PDF</span>
-              <span class="atb-fmt__desc">印刷用・ノンブル付き</span>
-            </label>
-            <input class="atb-fmt__input" type="checkbox" id="t-epub">
-            <label class="atb-fmt__item" for="t-epub">
-              <span class="atb-fmt__name">EPUB</span>
-              <span class="atb-fmt__desc">電子書籍</span>
-            </label>
-            <input class="atb-fmt__input" type="checkbox" id="t-web">
-            <label class="atb-fmt__item" for="t-web">
-              <span class="atb-fmt__name">WEB</span>
-              <span class="atb-fmt__desc">投稿サイト向け</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="setting">
-          <p class="atb-eyebrow">出力先</p>
-          <div class="atb-field">
-            <input class="atb-input atb-input--mono" value="at-book-out" placeholder="at-book-out">
-            <span class="atb-hint">原稿フォルダからの相対パス。</span>
-          </div>
-        </div>
-
-        <div class="setting">
-          <p class="atb-eyebrow">表紙テンプレート</p>
-          <div class="atb-stack atb-stack--tight">
-            <div class="atb-field">
-              <label class="atb-label">本文用紙の厚さ<span class="atb-label__opt">任意</span></label>
-              <div class="atb-unit">
-                <input class="atb-input atb-input--num" value="0.09">
-                <span class="atb-unit__suffix">mm / 枚</span>
-              </div>
-            </div>
-            <div class="atb-field">
-              <label class="atb-label">表紙用紙の厚さ<span class="atb-label__opt">任意</span></label>
-              <div class="atb-unit">
-                <input class="atb-input atb-input--num" value="0.23">
-                <span class="atb-unit__suffix">mm / 枚</span>
-              </div>
-            </div>
-            <span class="atb-hint">214 頁 → 背幅 <b>19.3 mm</b></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="run" style="margin-top:var(--sp-4)">
-        <button class="atb-btn atb-btn--primary atb-btn--lg atb-btn--block" id="run">組版する</button>
-        <p class="atb-hint" style="margin-top:var(--sp-2); text-align:center">初回のみ Chromium を取得する（数百 MB）</p>
-      </div>
-    </aside>
-
+    <div class="atb-canvas__foot">
+      <span id="tally">0 字 / 0 行</span>
+      <span>＠記法をそのまま解釈</span>
+    </div>
   </div>
-</div>
+
+  <!-- ボタンはこれひとつだけ -->
+  <div class="run">
+    <button class="atb-btn atb-btn--primary atb-btn--lg atb-btn--block" id="run">組版する</button>
+    <span class="atb-summary" id="summary"></span>
+  </div>
+
+  <!-- 組版するまで出さない -->
+  <section class="results" id="results" hidden>
+    <div class="results__hd">
+      <h2 class="results__title">結果</h2>
+      <span class="atb-summary" id="outdir">at-book-out/</span>
+    </div>
+
+    <div class="results__grid">
+      <div class="atb-stack atb-stack--tight" id="artifacts"></div>
+
+      <div>
+        <p class="atb-eyebrow">紙面</p>
+        <div class="atb-preview" style="height:220px">
+          <h3 class="atb-preview__title">第一章　序</h3>
+          <p><ruby>黄昏<rt>たそがれ</rt></ruby>の街に、鐘が鳴った。</p>
+          <p>空はもう<ruby>茜<rt>あかね</rt></ruby>色で、<span class="tenten">いちばん美しい</span>色をしていた。</p>
+          <div class="atb-preview__folio">14</div>
+        </div>
+      </div>
+    </div>
+
+    <details class="log">
+      <summary>ログを見る</summary>
+      <div class="atb-log">
+        <div class="atb-log__line"><span class="atb-log__time">10:24:02</span><span>設定を読み込み</span></div>
+        <div class="atb-log__line atb-log__line--ok"><span class="atb-log__time">10:24:03</span><span>＠記法を解析  見出し 12 ・ ルビ 148 ・ 圏点 9</span></div>
+        <div class="atb-log__line"><span class="atb-log__time">10:24:05</span><span>Vivliostyle で組版…</span></div>
+        <div class="atb-log__line atb-log__line--ok"><span class="atb-log__time">10:24:18</span><span>書き出し完了  214 頁</span></div>
+      </div>
+    </details>
+  </section>
+
+</main>
 
 <script>
-  // タブの切り替えだけ動かす。他は静的な見本。
-  document.querySelectorAll('.atb-tab').forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      document.querySelectorAll('.atb-tab').forEach(function (t) {
-        t.setAttribute('aria-selected', String(t === tab));
-      });
-      var which = tab.dataset.tab;
-      document.getElementById('pane-paste').classList.toggle('hidden', which !== 'paste');
-      document.getElementById('pane-file').classList.toggle('hidden', which !== 'file');
-    });
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var canvas = $('canvas'), text = $('text'), files = $('files'), tally = $('tally');
+  var gear = $('gear'), panel = $('panel'), summary = $('summary');
+  var run = $('run'), status = $('status'), results = $('results');
+  var dropped = [];
+
+  /* ── 設定パネルの開閉 ── */
+  function setOpen(open) {
+    panel.hidden = !open;
+    gear.setAttribute('aria-expanded', String(open));
+  }
+  gear.addEventListener('click', function (e) {
+    e.stopPropagation();
+    setOpen(panel.hidden);
+  });
+  document.addEventListener('click', function (e) {
+    if (!panel.hidden && !panel.contains(e.target)) setOpen(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !panel.hidden) { setOpen(false); gear.focus(); }
   });
 
-  // 「組版する」を押したときの状態遷移を素振りする
-  var run = document.getElementById('run');
-  var status = document.getElementById('status');
+  /* ── 設定の要約。開かなくても今の値が読める ── */
+  function currentSettings() {
+    var paper = document.querySelector('input[name=paper]:checked').value;
+    var wm = document.querySelector('input[name=wm]:checked').value;
+    var fmts = ['s-pdf', 's-epub', 's-web'].filter(function (id) { return $(id).checked; })
+                 .map(function (id) { return $(id).value; });
+    return { paper: paper, wm: wm, fmts: fmts, out: $('s-out').value || 'at-book-out' };
+  }
+  function renderSummary() {
+    var s = currentSettings();
+    var fmts = s.fmts.length ? s.fmts.join(' + ') : '出力形式が未選択';
+    summary.textContent = s.paper + ' ・ ' + s.wm + ' ・ ' + fmts + ' ・ ' + s.out + '/';
+    $('outdir').textContent = s.out + '/';
+  }
+  panel.addEventListener('change', renderSummary);
+  $('s-out').addEventListener('input', renderSummary);
+  renderSummary();
+
+  /* ── 字数 ── */
+  function renderTally() {
+    var body = text.value;
+    var chars = body.replace(/\s/g, '').length;
+    var lines = body ? body.split(/\r\n?|\n/).length : 0;
+    var fileChars = dropped.reduce(function (n, f) { return n + f.chars; }, 0);
+    var total = chars + fileChars;
+    tally.textContent = total.toLocaleString() + ' 字 / ' +
+      (dropped.length ? dropped.length + ' 件 + ' : '') + lines + ' 行';
+  }
+
+  /* ── ドロップ ── */
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    canvas.addEventListener(ev, function (e) {
+      e.preventDefault();
+      canvas.classList.add('atb-canvas--over');
+    });
+  });
+  canvas.addEventListener('dragleave', function (e) {
+    if (canvas.contains(e.relatedTarget)) return;
+    canvas.classList.remove('atb-canvas--over');
+  });
+  canvas.addEventListener('drop', function (e) {
+    e.preventDefault();
+    canvas.classList.remove('atb-canvas--over');
+    var list = Array.prototype.slice.call(e.dataTransfer.files);
+    list.forEach(function (f) {
+      var ext = (f.name.split('.').pop() || '').toLowerCase();
+      var ok = ['atb', 'txt', 'md'].indexOf(ext) !== -1;
+      var rec = { name: f.name, ext: ext, ok: ok, chars: 0 };
+      dropped.push(rec);
+      if (ok) {
+        var r = new FileReader();
+        r.onload = function () { rec.chars = String(r.result).replace(/\s/g, '').length; renderTally(); };
+        r.readAsText(f);
+      }
+      addRow(rec);
+    });
+    files.hidden = dropped.length === 0;
+    canvas.classList.toggle('atb-canvas--has-files', dropped.length > 0);
+    renderTally();
+  });
+
+  function addRow(rec) {
+    var li = document.createElement('li');
+    li.className = 'atb-file' + (rec.ok ? '' : ' atb-file--invalid');
+    li.innerHTML =
+      '<span class="atb-file__ext"></span>' +
+      '<span class="atb-file__name"></span>' +
+      '<span class="atb-file__meta"></span>' +
+      '<button class="atb-file__remove" aria-label="外す">×</button>';
+    li.querySelector('.atb-file__ext').textContent = rec.ext || '?';
+    li.querySelector('.atb-file__name').textContent = rec.ok ? rec.name : rec.name + ' — 読めない形式';
+    li.querySelector('.atb-file__remove').addEventListener('click', function () {
+      dropped.splice(dropped.indexOf(rec), 1);
+      li.remove();
+      files.hidden = dropped.length === 0;
+      canvas.classList.toggle('atb-canvas--has-files', dropped.length > 0);
+      renderTally();
+    });
+    files.appendChild(li);
+  }
+
+  text.addEventListener('input', renderTally);
+  renderTally();
+
+  /* ── 組版する ── */
   run.addEventListener('click', function () {
+    var s = currentSettings();
+    // 出力形式がひとつも無いなら、設定を開いて気づかせる
+    if (!s.fmts.length) { setOpen(true); return; }
+
     status.className = 'atb-status atb-status--running';
     status.textContent = '組版中';
     run.disabled = true;
+    results.hidden = true;
+
     setTimeout(function () {
       status.className = 'atb-status atb-status--done';
       status.textContent = '完了 ・ 22.4 秒';
       run.disabled = false;
-    }, 2200);
+
+      var box = $('artifacts');
+      box.innerHTML = '';
+      s.fmts.concat(['COVER']).forEach(function (kind) {
+        var meta = kind === 'PDF' ? s.paper + ' ' + s.wm + ' ・ 214 頁 ・ 3.8 MB'
+                 : kind === 'EPUB' ? 'リフロー ・ 1.2 MB'
+                 : kind === 'WEB' ? 'プレーンテキスト ・ 12 話'
+                 : '背幅 19.3 mm ・ 塗り足し 3 mm';
+        var name = kind === 'COVER' ? 'cover-template.pdf' : 'novel.' + kind.toLowerCase();
+        var el = document.createElement('div');
+        el.className = 'atb-artifact';
+        el.innerHTML =
+          '<span class="atb-artifact__kind"></span>' +
+          '<div class="atb-artifact__body"><div class="atb-artifact__name"></div>' +
+          '<div class="atb-artifact__meta"></div></div>' +
+          '<button class="atb-btn atb-btn--secondary atb-btn--sm">開く</button>';
+        el.querySelector('.atb-artifact__kind').textContent = kind;
+        el.querySelector('.atb-artifact__name').textContent = name;
+        el.querySelector('.atb-artifact__meta').textContent = meta;
+        box.appendChild(el);
+      });
+      results.hidden = false;
+    }, 1600);
   });
+})();
 </script>
 
 </body>

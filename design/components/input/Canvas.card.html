@@ -1,0 +1,98 @@
+<!-- @dsCard group="Input" name="Canvas — 原稿面" subtitle="貼り付けもドロップも受け口はここ一面。空 / 入力済み / ドラッグ中 / ファイル入り" viewport="640x740" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">空 — 誘い文句が浮く</p>
+    <div class="atb-canvas">
+      <div class="atb-canvas__invite">
+        <div class="atb-canvas__mark">＠</div>
+        <div class="atb-canvas__title">原稿をここへ</div>
+        <div class="atb-canvas__sub">貼り付け、またはファイルをドラッグ＆ドロップ</div>
+        <div class="atb-canvas__types">.atb / .txt / .md</div>
+      </div>
+      <textarea class="atb-canvas__text" style="min-height:170px" placeholder="原稿" aria-label="原稿"></textarea>
+      <div class="atb-canvas__foot">
+        <span>0 字 / 0 行</span>
+        <span>＠記法をそのまま解釈</span>
+      </div>
+    </div>
+    <p class="spec__note">誘い文句は <span class="atb-mono">pointer-events: none</span> で浮かべてある。クリックすればそのまま打ち始められる。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">入力済み — 点線が静かな実線に変わる</p>
+    <div class="atb-canvas">
+      <div class="atb-canvas__invite">
+        <div class="atb-canvas__mark">＠</div>
+        <div class="atb-canvas__title">原稿をここへ</div>
+      </div>
+      <textarea class="atb-canvas__text" style="min-height:130px" placeholder="原稿" aria-label="原稿">＠第一章　序
+
+　＠黄昏（たそがれ）の街に、鐘が鳴った。
+　少年は顔を上げる。空はもう＠茜（あかね）色だった。</textarea>
+      <div class="atb-canvas__foot">
+        <span>58 字 / 4 行</span>
+        <span>＠記法をそのまま解釈</span>
+      </div>
+    </div>
+    <p class="spec__note">空か否かの判定は <span class="atb-mono">:has(:placeholder-shown)</span> で行う。JS を介さない。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">ドラッグ中 — 面が朱に染まる唯一の瞬間</p>
+    <div class="atb-canvas atb-canvas--over">
+      <div class="atb-canvas__invite">
+        <div class="atb-canvas__mark">＠</div>
+        <div class="atb-canvas__title">放して読み込む</div>
+      </div>
+      <textarea class="atb-canvas__text" style="min-height:110px" placeholder="原稿" aria-label="原稿"></textarea>
+      <div class="atb-canvas__foot">
+        <span>0 字 / 0 行</span>
+        <span>.atb / .txt / .md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">ファイル入り — 同じ面の上端に積む</p>
+    <div class="atb-canvas atb-canvas--has-files">
+      <ul class="atb-canvas__files">
+        <li class="atb-file">
+          <span class="atb-file__ext">atb</span>
+          <span class="atb-file__name">01-prologue.atb</span>
+          <span class="atb-file__meta">2,140 字</span>
+          <button class="atb-file__remove" aria-label="外す">×</button>
+        </li>
+        <li class="atb-file">
+          <span class="atb-file__ext">atb</span>
+          <span class="atb-file__name">02-chapter-one.atb</span>
+          <span class="atb-file__meta">16,502 字</span>
+          <button class="atb-file__remove" aria-label="外す">×</button>
+        </li>
+        <li class="atb-file atb-file--invalid">
+          <span class="atb-file__ext">docx</span>
+          <span class="atb-file__name">no-title.docx — 読めない形式</span>
+          <span class="atb-file__meta">—</span>
+          <button class="atb-file__remove" aria-label="外す">×</button>
+        </li>
+      </ul>
+      <textarea class="atb-canvas__text" style="min-height:70px" placeholder="原稿" aria-label="原稿"></textarea>
+      <div class="atb-canvas__foot">
+        <span>18,642 字 / 3 件 + 0 行</span>
+        <span>並び順がそのまま autoGenerate の順序</span>
+      </div>
+    </div>
+    <p class="spec__note">ファイルを落としても貼り付け欄は残る。両方を混ぜて一冊にできる。</p>
+  </div>
+
+</div>
+</body>
+</html>

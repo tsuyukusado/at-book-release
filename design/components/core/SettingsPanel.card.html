@@ -1,0 +1,101 @@
+<!-- @dsCard group="Components" name="SettingsPanel — 歯車の中" subtitle="普段は畳んである。閉じた状態 / 開いた状態 / 要約行" viewport="640x680" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../card-frame.css">
+<style>
+  /* カード内では実際にポップさせず、開いた姿をその場に並べて見せる */
+  .static-panel { position: static; width: 340px; }
+  .bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--r-md);
+  }
+</style>
+</head>
+<body>
+<div class="spec">
+
+  <div class="spec__group">
+    <p class="spec__label">閉じている — 既定の姿</p>
+    <div class="bar">
+      <span style="font-family:var(--font-display); font-size:16px; color:var(--color-text-strong)">＠ 本 — 組版</span>
+      <span style="flex:1"></span>
+      <span class="atb-status atb-status--idle">待機</span>
+      <div class="atb-settings">
+        <button class="atb-settings__btn" aria-label="設定">⚙</button>
+      </div>
+    </div>
+    <p class="spec__note">設定は組版のたびに触るものではない。常時見せると原稿と実行ボタンの邪魔になるので畳んでおく。</p>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">押されている — aria-expanded="true"</p>
+    <div class="bar">
+      <span style="flex:1; color:var(--color-text-muted); font-size:12px">歯車自身も枠で押し込まれた状態になる</span>
+      <div class="atb-settings">
+        <button class="atb-settings__btn" aria-expanded="true" aria-label="設定">⚙</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">開いた中身</p>
+    <div class="atb-settings__panel static-panel">
+      <div class="atb-settings__group">
+        <p class="atb-eyebrow">用紙</p>
+        <div class="atb-seg">
+          <input class="atb-seg__input" type="radio" name="p" id="c-a4"><label class="atb-seg__item" for="c-a4">A4</label>
+          <input class="atb-seg__input" type="radio" name="p" id="c-a5"><label class="atb-seg__item" for="c-a5">A5</label>
+          <input class="atb-seg__input" type="radio" name="p" id="c-a6" checked><label class="atb-seg__item" for="c-a6">A6</label>
+          <input class="atb-seg__input" type="radio" name="p" id="c-b5"><label class="atb-seg__item" for="c-b5">B5</label>
+        </div>
+      </div>
+
+      <div class="atb-settings__group">
+        <p class="atb-eyebrow">組方向</p>
+        <div class="atb-seg">
+          <input class="atb-seg__input" type="radio" name="w" id="c-wv" checked><label class="atb-seg__item" for="c-wv">縦書き</label>
+          <input class="atb-seg__input" type="radio" name="w" id="c-wh"><label class="atb-seg__item" for="c-wh">横書き</label>
+        </div>
+      </div>
+
+      <div class="atb-settings__group">
+        <p class="atb-eyebrow">出力形式</p>
+        <div class="atb-fmt">
+          <input class="atb-fmt__input" type="checkbox" id="c-pdf" checked>
+          <label class="atb-fmt__item" for="c-pdf">
+            <span class="atb-fmt__name">PDF</span>
+            <span class="atb-fmt__desc">印刷用・ノンブル付き</span>
+          </label>
+          <input class="atb-fmt__input" type="checkbox" id="c-epub">
+          <label class="atb-fmt__item" for="c-epub">
+            <span class="atb-fmt__name">EPUB</span>
+            <span class="atb-fmt__desc">電子書籍</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="atb-settings__group">
+        <p class="atb-eyebrow">出力先</p>
+        <div class="atb-field">
+          <input class="atb-input atb-input--mono" value="at-book-out">
+          <span class="atb-hint">原稿フォルダからの相対パス。</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec__group">
+    <p class="spec__label">要約行 — 開かなくても今の値が読める</p>
+    <span class="atb-summary">A6 ・ 縦書き ・ PDF ・ at-book-out/</span>
+    <p class="spec__note">組版ボタンの真下に置く。設定を隠した代償を、この一行で払う。</p>
+  </div>
+
+</div>
+</body>
+</html>

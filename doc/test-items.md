@@ -239,6 +239,23 @@ vivliostyle CLI（＝ヘッドレスブラウザ）は起動せず、コマン�
 | E2E-01 | サンプル .atb を実変換 | PDF が生成され、ページ数 > 0 | e2e.test.ts | ⬜ |
 | E2E-02 | `at-book cover <頁数>` | SVG ファイルが生成される | e2e.test.ts | ⬜ |
 
+## 18. 執筆記録 — `usecase/writingLog.ts`
+
+git の履歴から、作品ごとの「その日の終わりに何文字あったか」を組み立てる。
+git 依存は `infrastructure/gitHistory.ts` に閉じ込め、ここは差し替え可能な `GitHistoryReader` 越しに検証する。
+
+| ID | 条件 | 期待結果 | テスト | 状態 |
+|----|------|----------|--------|------|
+| LOG-01 | 原稿が変わらないコミット | 記録しない | writingLog.test.ts | ✅ |
+| LOG-02 | 1 コミットで複数の作品が変更 | 両方を拾う | writingLog.test.ts | ✅ |
+| LOG-03 | 同じ日に複数コミット | その日の最後の値で 1 行に畳む | writingLog.test.ts | ✅ |
+| LOG-04 | 記録日が続く | 前の記録日との増減を出す（初日は無し） | writingLog.test.ts | ✅ |
+| LOG-05 | 作品が複数 | 作品ごとに分けて名前順に並べる | writingLog.test.ts | ✅ |
+| LOG-06 | 履歴の並びと日時がずれる | 日付順に並べ直す | writingLog.test.ts | ✅ |
+| LOG-07 | 整形 | 作品名の下に桁を揃えて並べる | writingLog.test.ts | ✅ |
+| LOG-08 | 増減の表記 | 符号付き。増減なしは `±0` | writingLog.test.ts | ✅ |
+| LOG-09 | 作品が複数 | 空行で区切る | writingLog.test.ts | ✅ |
+
 ---
 
 ## 進め方メモ

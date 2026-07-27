@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "日本語小説のための執筆記法「＠本」。.atb 原稿から縦書き PDF / EPUB / ウェブ投稿用テキストを生成する組版 CLI",
   "bin": {
-    "at-book": "./dist/cli/index.js"
+    "at-book": "./dist/cli/index.js",
+    "at-book-log": "./dist/cli/writingLog.js"
   },
   "files": [
     "dist",

@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import { writeFile, mkdir, readFile, copyFile, rm } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, readdirSync } from "fs";
+import { homedir } from "os";
 import * as path from "path";
 import { PDFDocument } from "pdf-lib";
 import type { HtmlToPdfRunner } from "../usecase";
@@ -26,6 +27,27 @@ const BUNDLED_FONTS_DIR = path.resolve(__dirname, '../../fonts');
 //   2. システムに入っている Chrome / Chromium を自動検出。
 //   3. 見つからなければ undefined を返し、Vivliostyle 同梱 Chromium に委ねる。
 // これにより、環境変数を毎回 export しなくても `at-book` 一発で生成できる。
+// 管理者権限なしで入れた Chrome の置き場。Vivliostyle 同梱の Chromium は
+// Playwright 経由で取得するため、対応していない OS（Ubuntu 26.04 など）では
+// ダウンロードに失敗する。その環境では利用者が手元に Chrome を置くことになるので、
+// システム領域だけでなくホーム配下も探して環境変数の指定を不要にする。
+// バージョン名のディレクトリを挟む配置は中を列挙して拾う。
+export function userLocalChromeCandidates(): string[] {
+    const home = homedir();
+    const found = [path.join(home, '.local', 'chrome-for-testing', 'chrome-linux64', 'chrome')];
+    // [列挙するディレクトリ, その下の実行ファイルまでの相対パス]
+    const versioned: [string, string][] = [
+        [path.join(home, '.cache', 'puppeteer', 'chrome'), path.join('chrome-linux64', 'chrome')],
+        [path.join(home, '.cache', 'ms-playwright'), path.join('chrome-linux', 'chrome')],
+    ];
+    for (const [base, rest] of versioned) {
+        try {
+            for (const entry of readdirSync(base)) found.push(path.join(base, entry, rest));
+        } catch { /* その置き場が無いだけなので次へ */ }
+    }
+    return found;
+}
+
 function resolveBrowser(): string | undefined {
     const fromEnv = process.env.AT_BOOK_CHROME;
     if (fromEnv && existsSync(fromEnv)) return fromEnv;
@@ -37,6 +59,8 @@ function resolveBrowser(): string | undefined {
         '/usr/bin/chromium',
         '/usr/bin/chromium-browser',
         '/snap/bin/chromium',
+        // システムに無ければホーム配下の手動設置分を使う。
+        ...userLocalChromeCandidates(),
     ];
     return candidates.find(p => existsSync(p));
 }

@@ -15,7 +15,8 @@
   },
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "npm run clean && tsc",
+    "chmod-bin": "node -e \"const p=require('./package.json'),fs=require('fs');for(const f of Object.values(p.bin))fs.chmodSync(f,0o755)\"",
+    "build": "npm run clean && tsc && npm run chmod-bin",
     "start": "node dist/cli/index.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

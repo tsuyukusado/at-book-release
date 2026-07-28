@@ -4,5 +4,7 @@ dist/
 *.tgz
 # vitest のカバレッジレポート
 coverage/
+# ＠本の組版成果物（既定の出力先。設定の outDir で名前を変えた場合は別途追記）
+at-book-out/
 CLAUDE.md
 .claude/

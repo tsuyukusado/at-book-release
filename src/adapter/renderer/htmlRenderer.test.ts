@@ -224,6 +224,22 @@ describe('ブロック要素', () => {
 });
 
 describe('ページ設定 CSS', () => {
+    it('改ページを行の切れ目で許すため orphans/widows を 1 にする', () => {
+        // CSS の既定はどちらも 2。日本語小説は 1〜3 行の短い段落が続くため、
+        // 既定のままだと「ページ末に 2 行残す・次ページへ 2 行送る」を満たせず
+        // 段落が丸ごと次ページへ送られ、切れ目が段落境界に固定されて余白が残る。
+        // 縦横・PDF/EPUB のどれでも行単位で紙面を埋めたいので全経路で 1 にする。
+        for (const css of [
+            render(parse('文'), vertical, 'pdf'),
+            render(parse('文'), horizontal, 'pdf'),
+            render(parse('文'), vertical, 'epub'),
+            render(parse('文'), horizontal, 'epub'),
+        ]) {
+            expect(css).toContain('orphans: 1;');
+            expect(css).toContain('widows: 1;');
+        }
+    });
+
     it('縦書きは vertical-rl を含み、横書きは含まない', () => {
         expect(html('文', vertical)).toContain('writing-mode: vertical-rl;');
         expect(html('文', horizontal)).not.toContain('writing-mode: vertical-rl;');

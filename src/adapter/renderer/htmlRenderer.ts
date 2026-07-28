@@ -227,6 +227,13 @@ html {
   text-justify: inter-character;
   line-break: strict;
   word-break: normal;
+  /* 改ページは行の切れ目ならどこでも許す。CSS の既定は orphans/widows とも 2 で、
+     「ページ末に 2 行残す・次ページへ 2 行送る」を満たせない段落は丸ごと次ページへ
+     送られる。日本語小説は 1〜3 行の短い段落が続くため、既定のままだと切れ目が
+     ほぼ段落境界に固定され、ページ末に余白が残る。1 にして紙面を行で埋める。
+     継承プロパティなので html に一度書けば本文全体に効く。 */
+  orphans: 1;
+  widows: 1;
 }
 
 body {

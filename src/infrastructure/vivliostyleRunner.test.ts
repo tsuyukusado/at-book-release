@@ -7,7 +7,7 @@ import archiver from 'archiver';
 import { PDFDocument } from 'pdf-lib';
 import StreamZip from 'node-stream-zip';
 import { spawn } from 'child_process';
-import { vivliostyleRunner, readPdfPageCount } from './vivliostyleRunner';
+import { vivliostyleRunner, readPdfPageCount, userLocalChromeCandidates } from './vivliostyleRunner';
 
 // vivliostyle CLI（＝ヘッドレスブラウザ）を実際に起動せず、起動コマンドの組み立てと
 // ビルドディレクトリの前処理・後始末だけを検証する。
@@ -236,5 +236,44 @@ describe('compileEpub（EPUB 組版）', () => {
         const opf = (await zip.entryData('EPUB/content.opf')).toString('utf-8');
         await zip.close();
         expect(opf).toContain('<meta name="primary-writing-mode" content="vertical-rl"/>');
+    });
+});
+
+describe('ホーム配下の Chrome 検出', () => {
+    // Vivliostyle 同梱 Chromium は Playwright 経由で取得するため、未対応 OS では
+    // ダウンロードに失敗する。利用者が管理者権限なしで置いた Chrome を拾えないと
+    // 毎回 AT_BOOK_CHROME の指定が要る。実在の Chrome に依存しないよう、
+    // 偽のホームを作って候補の並びだけを検証する。
+    let home: string;
+    let origHome: string | undefined;
+
+    beforeEach(async () => {
+        home = await mkdtemp(path.join(tmpdir(), 'at-book-home-'));
+        origHome = process.env.HOME;
+        process.env.HOME = home;
+    });
+    afterEach(async () => {
+        if (origHome === undefined) delete process.env.HOME;
+        else process.env.HOME = origHome;
+        await rm(home, { recursive: true, force: true });
+    });
+
+    it('手動設置の Chrome for Testing を候補に含める', () => {
+        expect(userLocalChromeCandidates())
+            .toContain(path.join(home, '.local', 'chrome-for-testing', 'chrome-linux64', 'chrome'));
+    });
+
+    it('バージョン名のディレクトリを挟む puppeteer / playwright の置き場も列挙する', async () => {
+        await mkdir(path.join(home, '.cache', 'puppeteer', 'chrome', 'linux-140.0.1'), { recursive: true });
+        await mkdir(path.join(home, '.cache', 'ms-playwright', 'chromium-1234'), { recursive: true });
+        const found = userLocalChromeCandidates();
+        expect(found).toContain(path.join(home, '.cache', 'puppeteer', 'chrome', 'linux-140.0.1', 'chrome-linux64', 'chrome'));
+        expect(found).toContain(path.join(home, '.cache', 'ms-playwright', 'chromium-1234', 'chrome-linux', 'chrome'));
+    });
+
+    it('置き場が無くても例外にせず候補を返す', () => {
+        // .cache を作っていないホームでも読み取り失敗で落ちてはいけない。
+        expect(() => userLocalChromeCandidates()).not.toThrow();
+        expect(userLocalChromeCandidates().length).toBeGreaterThan(0);
     });
 });
